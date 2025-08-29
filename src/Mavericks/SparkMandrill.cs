@@ -28,7 +28,7 @@ public class SparkMandrill : Maverick {
 		weakWeaponId = WeaponIds.ShotgunIce;
 		weakMaverickWeaponId = WeaponIds.ChillPenguin;
 
-		netActorCreateId = NetActorCreateId.SparkMandrill;
+		netActorCreateId = NetActorCreateId.X4Dragoon;
 		netOwner = player;
 		if (sendRpc) {
 			createActorRpc(player.id);

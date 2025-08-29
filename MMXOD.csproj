@@ -20,6 +20,7 @@
 		<Deterministic>true</Deterministic>
 		<NeutralLanguage>en</NeutralLanguage>
 		<FileVersion>20.0</FileVersion>
+		<WarningLevel>0</WarningLevel>
 		<Configurations>Debug;Release;Debug2</Configurations>
 	</PropertyGroup>
 

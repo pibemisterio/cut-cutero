@@ -87,8 +87,8 @@ public class MaverickWeapon : Weapon {
 		// X1
 		if (this is ChillPenguinWeapon) {
 			maverick = new ChillPenguin(player, pos, destPos, xDir, player.getNextActorNetId(), true, sendRpc: true);
-		} else if (this is SparkMandrillWeapon) {
-			maverick = new SparkMandrill(player, pos, destPos, xDir, player.getNextActorNetId(), true, sendRpc: true);
+		} else if (this is X4DragoonWeapon) {
+			maverick = new X4Dragoon(player, pos, destPos, xDir, player.getNextActorNetId(), true, sendRpc: true);
 		} else if (this is ArmoredArmadilloWeapon) {
 			maverick = new ArmoredArmadillo(player, pos, destPos, xDir, player.getNextActorNetId(), true, sendRpc: true);
 		} else if (this is LaunchOctopusWeapon) {
@@ -215,6 +215,15 @@ public class SparkMandrillWeapon : MaverickWeapon {
 
 	public SparkMandrillWeapon(Player? player = null, int controlMode = 0) : base(player, controlMode) {
 		index = (int)WeaponIds.SparkMandrill;
+		weaponSlotIndex = 67;
+		displayName = "Spark Mandrill";
+	}
+}
+public class X4DragoonWeapon : MaverickWeapon {
+	public static X4DragoonWeapon netWeapon = new();
+
+	public X4DragoonWeapon(Player? player = null, int controlMode = 0) : base(player, controlMode) {
+		index = (int)WeaponIds.X4Dragoon;
 		weaponSlotIndex = 67;
 		displayName = "Spark Mandrill";
 	}

@@ -8,7 +8,7 @@ public enum NetActorCreateId {
 	RideArmor,
 	RaySplasherTurret,
 	ChillPenguin,
-	SparkMandrill,
+	X4Dragoon,
 	ArmoredArmadillo,
 	LaunchOctopus,
 	BoomerangKuwanger,
@@ -47,6 +47,7 @@ public enum NetActorCreateId {
 	BlastHornet,
 	DrDoppler,
 	RideChaser,
+	SparkMandrill,
 }
 
 public class RPCCreateActor : RPC {
@@ -80,8 +81,8 @@ public class RPCCreateActor : RPC {
 			case (int)NetActorCreateId.ChillPenguin:
 				new ChillPenguin(player, pos, pos, xDir, netProjByte, false);
 				break;
-			case (int)NetActorCreateId.SparkMandrill:
-				new SparkMandrill(player, pos, pos, xDir, netProjByte, false);
+			case (int)NetActorCreateId.X4Dragoon:
+				new X4Dragoon(player, pos, pos, xDir, netProjByte, false);
 				break;
 			case (int)NetActorCreateId.ArmoredArmadillo:
 				new ArmoredArmadillo(player, pos, pos, xDir, netProjByte, false);

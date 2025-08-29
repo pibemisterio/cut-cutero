@@ -100,7 +100,7 @@ public enum WeaponIds {
 	ArmoredArmadillo,
 	FlameMammoth,
 	StormEagle,
-	SparkMandrill,
+	X4Dragoon,
 	BoomerangKuwanger,
 	ChillPenguin,
 	Velguarder,
@@ -125,7 +125,11 @@ public enum WeaponIds {
 	TunnelRhino,
 	DrDoppler,
 	// Sigma summons end here.
+    
+	SparkMandrill,
 	
+	DragoonGeneric,
+
 	// Zero stuff.
 	ZSaber,
 	ZSaberProjSwing,
@@ -716,6 +720,22 @@ public enum ProjIds {
 	RideChaserHit,
 	RideChaserCrash,
 	DarkHold,
+
+	//dunk id
+
+	DragoonAttackWeakProj,
+	DragoonAttackStrongProj,
+	DragoonBreathProj,
+	DragoonShoryukenProj,
+	DragoonDivekickProj,
+	DragoonGigaAuraProj,
+	DragoonMeteorGenerator,
+	DragoonUpwardsMeteor,
+	DragoonDownwardsMeteor,
+	DragoonSatsuPunchProj,
+	DragoonSatsuDeath,
+
+	SatsuId,
 
 	// PunchyZeroStuff
 	PZeroPunch,

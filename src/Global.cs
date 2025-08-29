@@ -61,10 +61,23 @@ public partial class Global {
 	 */
 
 	// Most common by far
-	public static int quickStartCharNum = 2;
-	public static int quickStartBotCharNum = 0;
 
-	public static bool _quickStart = true;
+	/*
+0 = X
+1 = Zero
+2 = Vile
+3 = Axl
+4 = Sigma
+5 = Knuckle
+6 = Zbuster
+
+miau preferedchar
+
+*/
+	public static int quickStartCharNum = 4;
+	public static int quickStartBotCharNum = 0;
+	                                       //X4SkyLagoon1  //training
+	public static bool _quickStart = true; //RXDFloatingRuins_mdrt = true;
 	public static string quickStartMap = "training";
 	public static bool quickStartMirrored = false;
 
@@ -136,7 +149,7 @@ public partial class Global {
 	// Feature switches
 	public static bool maverickWallClimb = false;
 
-	public static bool debug = false;
+	public static bool debug = true;
 
 	public static bool consoleDebugLogging = false;
 

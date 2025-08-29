@@ -114,7 +114,7 @@ public class Weapon {
 				new ArmoredArmadilloWeapon(player, commandMode),
 				new FlameMammothWeapon(player, commandMode),
 				new StormEagleWeapon(player, commandMode),
-				new SparkMandrillWeapon(player, commandMode),
+				new X4DragoonWeapon(player, commandMode),
 				new BoomerangKuwangerWeapon(player, commandMode),
 				new ChillPenguinWeapon(player, commandMode),
 				new VelguarderWeapon(player, commandMode),

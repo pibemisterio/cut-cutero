@@ -416,7 +416,7 @@ public class SigmaLoadout {
 			2 => new ArmoredArmadilloWeapon(player, commandMode),
 			3 => new FlameMammothWeapon(player, commandMode),
 			4 => new StormEagleWeapon(player, commandMode),
-			5 => new SparkMandrillWeapon(player, commandMode),
+			5 => new X4DragoonWeapon(player, commandMode),
 			6 => new BoomerangKuwangerWeapon(player, commandMode),
 			7 => new ChillPenguinWeapon(player, commandMode),
 			8 => new VelguarderWeapon(player, commandMode),

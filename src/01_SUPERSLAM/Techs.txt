@@ -1,0 +1,390 @@
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                                    Aca van las tecnicas
+
+
+=========================================================  onStart()  ==================================================================
+
+public override void onStart() {
+    base.onStart();
+}
+
+========================================================= onHitWall(CollideData other)  ================================================
+
+public override void onHitWall(CollideData other) {
+    base.onHitWall(other);
+    if (other.isSideWallHit()) {
+        xDir *= -1;
+        vel.x *= xDir;  // Fixed: removed redundant multiplication
+    }
+    if (other.isCeilingHit()) {
+        vel.y *= -1;    // Reverse vertical velocity when hitting ceiling
+    }
+    if (other.isGroundHit()) {
+        vel.y *= -1;    // Bounce off the ground (or stop, depending on your game logic)
+    }
+}
+
+=== zIndex consturctor ===
+
+zIndex = (ZIndex.Foreground)
+zIndex = this.zIndex - 30
+
+=== delayed action ===
+
+Global.level.delayedActions.Add(new DelayedAction(delegate {
+    
+}, 3f / 60f));
+
+========================================================= float partTime;  ===========================================================
+
+float partTime;
+
+public override void update() {
+    base.update();
+    partTime += Global.spf;
+    if (partTime >= 0.08f) {
+        partTime = 0;
+        new Anim(
+            pos.addxy(0 * xDir, 0),
+            "mav_x4dgn_1atk_proj_weak", 1, null, true
+        ) {
+            vel = new Point(0, 0),
+            acc = new Point(0, 0)
+        };
+    }
+}
+
+new Anim(getCenterPos().addxy(Helpers.randomRange(-10, 30) * xDir, Helpers.randomRange(10, 30)),
+    "mav_x4bst_1atk_proj_strong_Fx", xDir, null, true, sendRpc: true
+) {
+    vel = new Point(300 * xDir, 0), //reverse soeed
+    acc = new Point(0, 0)
+};
+
+========================================================= visible = Global.isOnFrameCycle(2);  =====================================
+
+visible = Global.isOnFrameCycle(2);
+
+========================================================= common new proj ========================================================== 
+
+new WalrusAttackProj(pos, xDir, this, ownerPlayer, owner.getNextActorNetId(), true);
+
+========================================================= byteAngle wheel  =========================================================
+        192
+         ^
+  224 '  |  ' 160
+     \   |   /
+      \  |  /
+<-- 0 ---+--- 128 -->
+      /  |  \
+     /   |   \
+   32 .  |  . 96
+         v
+        64 
+
+
+========================================================= Helpers.lerp ==============================================================
+
+vel.x = Helpers.lerp(vel.x, 0, Global.spf * 0.5f);
+
+=========================================================  matrioska projs  ========================================================= 
+ 
+new ShotgunIceProj(
+    pos.clone(), xDir, this, damager.owner, 1, Global.level.mainPlayer.getNextActorNetId(),
+    ((-1 * xDir), -2), chr, rpc: true
+);
+
+
+
+=========================================================  get close stuff ========================================================= 
+
+    public override void aiUpdate() {
+        base.aiUpdate();
+        if (controlMode == MaverickModeId.Summoner &&
+            Helpers.randomRange(0, 2) == 1 && ammo >= 8 && state.aiAttackCtrl
+        ) {
+            foreach (GameObject gameObject in getCloseActors(64, true, false, false)) {
+                if (gameObject is Projectile proj &&
+                    proj.damager.owner.alliance != player.alliance &&
+                    !proj.isMelee
+                ) {
+                    changeState(new FakeZeroGuardState());
+                }
+            }
+        }
+    }
+
+========================================================= idamagable copypasta  =====================================================
+
+remember hurbox bigger than hitboc
+
+: Projectile, IDamagable 
+
+float health;
+
+public void applyDamage(float damage, Player? owner, Actor? actor, int? weaponIndex, int? projId)
+{ health -= damage; if (health < 0) { health = 0; destroySelf(); } }
+public bool canBeDamaged(int damagerAlliance, int? damagerPlayerId, int? projId) { return owner.alliance != damagerAlliance; }
+public bool isInvincible(Player attacker, int? projId) { return false; }
+public bool canBeHealed(int healerAlliance) { return false; }
+public void heal(Player healer, float healAmount, bool allowStacking = true, bool drawHealText = false) { }
+public bool isPlayableDamagable() { return false; }
+
+========================================================= Change Char Collider  =========================================================
+
+character.globalCollider = character.getCrouchingCollider();
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+=========================================================  CharState  =========================================================
+
+#region ■ CharState ━━━━━━━━
+public class TemplateCharstate : CharState {
+    MegamanX mmx = null!;
+    private bool fired;
+    // bool grounded;
+    public TemplateCharstate() : base("x4twr_cast") {
+ // public TemplateCharstate(bool grounded) : base(grounded ? "x4bdy_cast" : "x4bdy_cast_air") {
+
+        /*    this.grounded = grounded;
+           airSprite = "x4bdy_cast_air";
+           landSprite = "x4bdy_cast";
+        */
+    }
+    public override void onEnter(CharState oldState) {
+        base.onEnter(oldState);
+        mmx = player.character as MegamanX ?? throw new NullReferenceException();
+        character.playSound("x4bdy_charged", isVoiceClipKey: true, sendRpc: true);
+        character.stopMoving();
+    }
+    public override void update() {
+        base.update();
+        if (character.frameIndex >= 2 && !fired) {
+            fired = true;
+            // new
+        }
+        if (character.isAnimOver()) {
+            character.changeToIdleOrFall();
+        }
+    }
+    public override void onExit(CharState? newState) {
+        base.onExit(newState);
+    }
+}
+#endregion
+
+=========================================================  MavState  =========================================================
+
+#region ■ MavState ━━━━━
+public class MavState : MaverickState {
+    public X4Beast bestia = null!;
+  //bool startedGrounded;
+
+    public MavState() : base("1atk") {
+  //public MavState(bool startedGrounded) : base(startedGrounded ? "1atk" : "1atk_air") {
+  //this.startedGrounded = startedGrounded;
+    }
+
+    public override void onEnter(MaverickState oldState) {
+        base.onEnter(oldState);
+        bestia = maverick as X4Beast ?? throw new NullReferenceException();
+        maverick.stopMoving();
+    }
+
+    public override void update() {
+        base.update();
+
+        if (maverick.isAnimOver()) {
+            maverick.changeState(new MIdle());
+        }
+    }
+    
+    public override void onExit(MaverickState newState) {
+        base.onExit(newState);
+    }
+}
+#endregion
+
+========================================================= NeutralProjectile  =========================================================
+
+#region ⬤ Neutral ━━━━━━
+public class NeutralProj : Projectile {
+    public NeutralProj(
+        Point pos, int xDir, Actor owner, Player player, ushort? netId, bool rpc = false
+    ) : base(
+        pos, xDir, owner, "empty", netId, player
+    ) {
+        weapon = NewBuster.netWeapon;
+        projId = (int)ProjIds.BusterLv0Proj;
+        damager.damage = 1;
+        damager.flinch = Global.defFlinch;
+        damager.hitCooldown = 30;
+        vel = new Point(300 * xDir, 0);
+        maxTime = 1.2f;
+        destroyOnHit = true;
+        destroyOnHitWall = false;
+        fadeSprite = "mmx_x4btr_lv0_fade";
+        
+        if (rpc) {
+            rpcCreate(pos, owner, ownerPlayer, netId, xDir);
+        }
+    }
+    
+    public static Projectile rpcInvoke(ProjParameters args) {
+        return new NeutralProj(
+            args.pos, args.xDir, args.owner, args.player, args.netId
+        );
+    }
+    
+    public override void update() {
+        base.update();
+    }
+    
+    public override void onDestroy() {
+        base.onDestroy();
+    }
+}
+#endregion
+
+========================================================= TypedProjectile  =========================================================
+
+#region ⬤ Typed ━━━━━━
+public class TypedProj : Projectile {
+    //public int type;
+    public TypedProj(
+        Point pos, int xDir, int type, Actor owner, Player player, ushort? netId, bool rpc = false
+    ) : base(
+        pos, xDir, owner, "empty", netId, player
+    ) {
+        //this.type = type;
+        weapon = NewBuster.netWeapon;
+        projId = (int)ProjIds.BusterLv0Proj;
+        damager.damage = 1;
+        damager.flinch = Global.defFlinch;
+        damager.hitCooldown = 30;
+        vel = new Point(300 * xDir, 0);
+        maxTime = 1.2f;
+        destroyOnHit = true;
+        destroyOnHitWall = false;
+        fadeSprite = "mmx_x4btr_lv0_fade";
+
+        switch (type) {
+            case 0:
+                break;
+            case 1:
+                break;
+        }
+
+        if (rpc) {
+            rpcCreate(pos, owner, ownerPlayer, netId, xDir, (byte)type);
+        }
+    }
+    
+    public static Projectile rpcInvoke(ProjParameters args) {
+        return new TypedProj(
+            args.pos, args.xDir, args.extraData[0], args.owner, args.player, args.netId
+        );
+    }
+    
+    public override void update() {
+        base.update();
+    }
+    
+    public override void onDestroy() {
+        base.onDestroy();
+    }
+}
+#endregion
+
+========================================================= AngledProjectile  =========================================================
+
+#region ⬤ Angled ━━━━━━
+public class AngledProj : Projectile {
+    public AngledProj(
+        Point pos, int xDir, float byteAngle, Actor owner, Player player, ushort? netId, bool rpc = false
+    ) : base(
+        pos, xDir, owner, "empty", netId, player
+    ) {
+        weapon = NewBuster.netWeapon;
+        projId = (int)ProjIds.BusterLv0Proj;
+        damager.damage = 1;
+        damager.flinch = Global.defFlinch;
+        damager.hitCooldown = 30;
+        byteAngle = byteAngle % 256;
+        this.byteAngle = byteAngle;
+        vel.x = 400 * Helpers.cosb(byteAngle);
+        vel.y = 400 * Helpers.sinb(byteAngle);
+        maxTime = 1.2f;
+        destroyOnHit = true;
+        destroyOnHitWall = false;
+        fadeSprite = "mmx_x4btr_lv0_fade";
+        
+        if (rpc) {
+            rpcCreateByteAngle(pos, owner, ownerPlayer, netId, byteAngle);
+        }
+    }
+    
+    public static Projectile rpcInvoke(ProjParameters args) {
+        return new AngledProj(
+            args.pos, args.xDir, args.byteAngle, args.owner, args.player, args.netId
+        );
+    }
+    
+    public override void update() {
+        base.update();
+    }
+    
+    public override void onDestroy() {
+        base.onDestroy();
+    }
+}
+#endregion
+
+========================================================= Typed&AngledProjectile  =========================================================
+
+#region ⬤ TypeAngled ━━━━━━
+public class TypeAngledProj : Projectile {
+    public int type;
+    
+    public TypeAngledProj(
+        Point pos, int xDir, int type, float byteAngle, Actor owner, Player player, ushort? netId, bool rpc = false
+    ) : base(
+        pos, xDir, owner, "empty", netId, player
+    ) {
+        this.type = type;
+        weapon = NewBuster.netWeapon;
+        projId = (int)ProjIds.BusterLv0Proj;
+        damager.damage = 1;
+        damager.flinch = Global.defFlinch;
+        damager.hitCooldown = 30;
+        byteAngle = byteAngle % 256;
+        this.byteAngle = byteAngle;
+        vel.x = 400 * Helpers.cosb(byteAngle);
+        vel.y = 400 * Helpers.sinb(byteAngle);
+        maxTime = 1.2f;
+        destroyOnHit = true;
+        destroyOnHitWall = false;
+        fadeSprite = "mmx_x4btr_lv0_fade";
+
+        switch (type) {
+            case 0:
+                // Type 0 behavior
+                break;
+            case 1:
+                // Type 1 behavior
+                break;
+        }
+
+        if (rpc) {
+            rpcCreateByteAngle(pos, owner, player, netId, byteAngle, (byte)type);
+        }
+    }
+    
+    public static Projectile rpcInvoke(ProjParameters args) {
+        return new TypeAngledProj(
+            args.pos, args.xDir, args.extraData[0], args.byteAngle, args.owner, args.player, args.netId
+        );
+    }
+}
+#endregion
