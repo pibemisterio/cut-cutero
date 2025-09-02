@@ -156,7 +156,7 @@ public class MushroomRun : MaverickState {
     private bool isHoldingDirection;
     private int lastXDir;
 
-    private const float SPEED_ACC = 165f;   //holding fowards
+    private const float SPEED_ACC = 180f;   //holding fowards
     private const float SPEED_DEACC = 230f; //not holding anything
     private const float SPEED_MAX = 200f;
 
@@ -191,19 +191,17 @@ public class MushroomRun : MaverickState {
 
         maverick.move(new Point((int)(storedXSpeed * maverick.xDir), 0));
 
-        //----------------------Movement Calculation------------------------------------
-        //animation speed * math
-        maverick.frameSpeed = Math.Max(1f, 1f * (storedXSpeed * 0.014f));
+        //---------------------- Movement Calculation ------------------------------
 
+        maverick.frameSpeed = Math.Max(1f, 1f * (storedXSpeed * 0.014f));  //animation speed
+        //acc and deacc
         if (isHoldingDirection) {
-            // Accelerate when holding direction
             storedXSpeed = Math.Min(SPEED_MAX, storedXSpeed + (Global.spf * SPEED_ACC));
         } else {
-            // Decelerate when NOT holding direction
             storedXSpeed = Math.Max(0, storedXSpeed - (Global.spf * SPEED_DEACC));
         }
         if (lastXDir != maverick.xDir && isHoldingDirection) {
-            storedXSpeed = 0;
+            storedXSpeed = 0.25f;
         }
 
         if (!isHoldingDirection && storedXSpeed <= 30f) {
@@ -212,6 +210,9 @@ public class MushroomRun : MaverickState {
         //Controller
         if (maverick.input.isPressed(Control.Jump, maverick.player)) {
             maverick.changeState(new MushroomJump(storedXSpeed, isDoubleJump: (maverick.grounded ? false : true)));
+        }
+        if (maverick.input.isHeld(Control.Down, maverick.player)) {
+            maverick.changeState(new MushroomSpinDash(storedXSpeed * 1.2f));
         }
     }
 }
@@ -229,7 +230,7 @@ public class MushroomJump : MaverickState {
     private bool isHoldingDirection;
     private int lastXDir;
 
-    private const float SPEED_ACC = 165f;   //holding fowards
+    private const float SPEED_ACC = 180f;   //holding fowards
     private const float SPEED_DEACC = 230f; //not holding anything
     private const float SPEED_MAX = 200f;
 
@@ -302,24 +303,26 @@ public class MushroomJump : MaverickState {
         }
         //end when grounded
         if (maverick.grounded && stateTime >= 0.1f) {
-            maverick.changeState(new MushroomRun(storedXSpeed));
+            maverick.changeState(new MushroomRun(Math.Abs(storedXSpeed)));
         }
     }
 }
 #endregion
 
-
 #region ■ Croutch ━━━━━
 public class MushroomCroutch : MaverickState { //aka spindash start
     public X4Mushroom minepe = null!;
     private bool startedSpindashing;
-    private float dashFactor = 0;
+    private float revLevel = 0;
     private float timeSinceLastRev = 1f;
 
-    private const float MIN_FACTOR = 100;
-    private const float MAX_FACTOR = 400;
-    private const float FACTOR_MULT = 1.5f; //when release
+    private const float MIN_LEVEL = 0;
+    private const float MAX_LEVEL = 3;
 
+    private readonly float[] levelFrameSpeeds = { 2f, 5f, 8f, 12f };
+    private readonly float[] levelSpeeds = { 200f, 300f, 400f, 550f };
+
+    private float levelSpeed = 0f;
 
     public MushroomCroutch() : base("croutch") {
     }
@@ -332,20 +335,20 @@ public class MushroomCroutch : MaverickState { //aka spindash start
 
     public override void update() {
         base.update();
-
+        levelSpeed = levelSpeeds[(int)revLevel];
         //------------------------------Croutch Handling------------------------
         // Initiate SpinDash/Croutch
         if (!input.isHeld(Control.Down, player)) {
             if (!startedSpindashing) {
                 maverick.changeState(new MIdle());
             } else {
-                maverick.changeState(new MushroomSpinDash(dashFactor * FACTOR_MULT));
+                maverick.changeState(new MushroomSpinDash(levelSpeed));
             }
         }
         //Initiate Revvin'
         if (input.isPressed(Control.Dash, player) && !startedSpindashing) {
             startedSpindashing = true;
-            dashFactor = MIN_FACTOR;
+            revLevel = 0;
             maverick.changeSpriteFromName("3dash_spin", true);
         }
 
@@ -353,16 +356,16 @@ public class MushroomCroutch : MaverickState { //aka spindash start
 
         //Decrease factor over time 
         if (startedSpindashing) {
-            maverick.frameSpeed = dashFactor * 0.03f; //anim speed
-            timeSinceLastRev -= Global.spf * 3.5f;   // 3.5 equals decrease time mult
+            maverick.frameSpeed = levelFrameSpeeds[(int)revLevel]; //anim speed
+            timeSinceLastRev -= Global.spf * 2f;   // 3.5 equals decrease time mult
         }
         if (timeSinceLastRev <= 0) {
             timeSinceLastRev = 1f;
-            dashFactor = Math.Max(MIN_FACTOR, dashFactor - MIN_FACTOR);
+            revLevel = Math.Max(MIN_LEVEL, revLevel - 1);
         }
         //Increase Factor by Control.Dash
         if (input.isPressed(Control.Dash, player) && startedSpindashing) {
-            dashFactor = Math.Min(MAX_FACTOR, dashFactor + MIN_FACTOR);
+            revLevel = Math.Min(MAX_LEVEL, revLevel + 1);
             timeSinceLastRev = 1f;
 
             new Anim(maverick.pos.addxy(5 * -maverick.xDir, 0), "dash_sparks",
@@ -432,38 +435,32 @@ public class MushroomSpinDash : MaverickState { //Copypasted from Run, but remov
         if (lastXDir != maverick.xDir && isHoldingDirection) {
             storedXSpeed = -storedXSpeed;
         }
-        if (storedXSpeed <= 30f) {
-            maverick.changeState(new MIdle());
-        }
-        if (storedXSpeed <= 200f) {
-            if (maverick.input.isHeld(Control.Left, maverick.player) || maverick.input.isHeld(Control.Right, maverick.player)) {
-                maverick.changeState(new MushroomRun(storedXSpeed));
+        if (maverick.grounded) {
+            if (storedXSpeed <= 15f) {
+                maverick.changeState(new MIdle());
+            }
+            if (storedXSpeed <= 30) {
+                if (maverick.input.isHeld(Control.Left, maverick.player) || maverick.input.isHeld(Control.Right, maverick.player)) {
+                    maverick.changeState(new MushroomRun(storedXSpeed));
+                }
             }
         }
         //----------------------Jump Controller------------------------------------
 
         if (maverick.input.isPressed(Control.Jump, maverick.player) && maverick.grounded) {
-            maverick.vel.y = -maverick.getJumpPower() * 1.2f;
-            jumpTime = 0; 
+            maverick.vel.y = -maverick.getJumpPower() * 1.3f;
+            jumpTime = 0;
             stoppedHoldingJump = false;
         }
-        if (jumpTime >= 0.05f) {
-            if (!player.input.isHeld(Control.Jump, player) || jumpTime >= 0.4f)
+        if (jumpTime >= 0.06f) {
+            if (!player.input.isHeld(Control.Jump, player) || jumpTime >= 0.25f)
                 if (!stoppedHoldingJump) {
                     stoppedHoldingJump = true;
                     maverick.vel.y *= 0.4f; //smoother
-                   jumpTime = 0; 
+                    jumpTime = 0;
                 }
         }
     }
-
-    public override void onExit(MaverickState newState) {
-        base.onExit(newState);
-
-
-    }
-
-
 }
 #endregion
 
