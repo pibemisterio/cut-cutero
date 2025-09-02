@@ -411,14 +411,14 @@ public class SigmaLoadout {
 	public static Weapon getWeaponById(Player player, int weaponId, int commandMode) {
 		return weaponId switch {
 			// X1 stuff.
-			0 => new LaunchOctopusWeapon(player, commandMode),
+			0 => new X4MushroomWeapon(player, commandMode),
 			1 => new StingChameleonWeapon(player, commandMode),
-			2 => new ArmoredArmadilloWeapon(player, commandMode),
-			3 => new FlameMammothWeapon(player, commandMode),
+			2 => new X4StingrayWeapon(player, commandMode),
+			3 => new X4PeacockWeapon(player, commandMode),
 			4 => new StormEagleWeapon(player, commandMode),
 			5 => new X4DragoonWeapon(player, commandMode),
 			6 => new BoomerangKuwangerWeapon(player, commandMode),
-			7 => new ChillPenguinWeapon(player, commandMode),
+			7 => new X4SpiderWeapon(player, commandMode),
 			8 => new VelguarderWeapon(player, commandMode),
 			// X2 Stuff.
 			9 => new CrystalSnailWeapon(player, commandMode),

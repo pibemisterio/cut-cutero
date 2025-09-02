@@ -482,7 +482,7 @@ public class WarpIn : CharState {
 			warpAnim.destroySelf();
 		}
 		if (addInvulnFrames && character.ownedByLocalPlayer) {
-			character.invulnTime = (player.warpedInOnce || Global.level.joinedLate) ? 2 : 0;
+			character.invulnTime = (player.warpedInOnce || Global.level.joinedLate) ? 0 : 0; //paputodo turn back off (2 : 0)
 		}
 		if (refillHP && character.ownedByLocalPlayer && newState is not WarpIdle) {
 			character.spawnHealthToAdd = MathInt.Ceiling(character.maxHealth);

@@ -4,19 +4,8 @@ namespace MMXOnline;
 
 #region ▄▄★ TEMPLATE ★▄▄ 
 
-public class X4Stingray: Maverick {
+public class X4Stingray : Maverick {
     public static Weapon getWeapon() { return new Weapon(WeaponIds.FakeZeroGeneric, 150); }
-    public float dashDist;
-    public float baseSpeed = 50;
-    public float accSpeed;
-    public int lastDirX;
-    // public Anim? exhaust;
-    public float topSpeed = 200;
-    public int shootNum = 0;
-
-    // Ammo uses.
-    public static int shootLv2Ammo = 3;
-    public static int shootLv3Ammo = 4;
 
     // Main creation function.
     public X4Stingray(
@@ -70,7 +59,7 @@ public class X4Stingray: Maverick {
             changeState(new FakeZeroShootState(), false);
             return true;
         }
-        if (input.isPressed(Control.Special1, player) && ammo >= shootLv3Ammo) {
+        if (input.isPressed(Control.Special1, player)) {
             changeState(new FakeZeroMeleeState());
             return true;
         }
@@ -89,15 +78,12 @@ public class X4Stingray: Maverick {
 
 
     public override float getRunSpeed() {
-        float retSpeed = baseSpeed + accSpeed;
-        if (retSpeed > Physics.WalkSpeed) {
-            return retSpeed;
-        }
-        return Physics.WalkSpeed;
+
+        return 111;
     }
 
     public override string getMaverickPrefix() {
-        return "mav_x4stg";
+        return "mav_x4";
     }
 
     public override MaverickState[] strikerStates() {
@@ -140,20 +126,34 @@ public class X4Stingray: Maverick {
 }
 
 
-#endregion
-#region ▄▄▄■ STATES ■▄▄▄▄
+// #endregion
+// #region ▄▄▄■ STATES ■▄▄▄▄
+
+// class StingrayFly
+
+//        cousumes fuel, dashing consumes way more
 
 
+// class StingrayKneeShot
+
+// class StingrayWhirpool
+
+// class StingrayDash
+
+// class StingrayGiga
 
 
+// #endregion
 
+// #region ▄▄▄▄⬤ PROJ ⬤▄▄▄▄
 
+// class StingrayKneeProj
 
-#endregion
+// class StingrayWhirpoolProj
 
-#region ▄▄▄▄⬤ PROJ ⬤▄▄▄▄
+// class StingrayDashProj
 
-
+// class StingrayGigaProj
 
 
 

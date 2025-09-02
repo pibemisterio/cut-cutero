@@ -418,7 +418,7 @@ public class Maverick : Actor, IDamagable {
 			playSound("jump", sendRpc: true);
 		}
 		if (state.airMove && !grounded) {
-			int inputDir =  input.getXDir(player);
+			int inputDir = input.getXDir(player);
 			if (inputDir != 0) {
 				xDir = inputDir;
 				move(new Point(inputDir * getRunSpeed() * getDashSpeed() * getAirSpeed(), 0));
@@ -446,7 +446,7 @@ public class Maverick : Actor, IDamagable {
 				changeState(new MTaunt());
 				return true;
 			}
-			if (input.isPressed(Control.Jump, player)) {
+			if (input.isPressed(Control.Jump, player) && this is not X4Mushroom) {  //PAPUTODO remember this
 				changeState(new MJumpStart());
 				return true;
 			}
@@ -485,7 +485,7 @@ public class Maverick : Actor, IDamagable {
 	public virtual bool attackCtrl() {
 		return false;
 	}
-	
+
 	public override void statePreUpdate() {
 		state.stateFrame += speedMul;
 		state.preUpdate();
@@ -495,7 +495,7 @@ public class Maverick : Actor, IDamagable {
 	public override void stateUpdate() {
 		state.update();
 	}
-	
+
 	public override void statePostUpdate() {
 		state.postUpdate();
 	}
@@ -862,11 +862,10 @@ public class Maverick : Actor, IDamagable {
 
 		if (Global.sprites.ContainsKey($"{getMaverickPrefix()}_{newState.sprite}")) {
 			changeSpriteFromName(newState.sprite, true);
-		}
-		else if (
-			newState.sprite == newState.transitionSprite &&
-			Global.sprites.ContainsKey($"{getMaverickPrefix()}_{newState.defaultSprite}")
-		) {
+		} else if (
+			  newState.sprite == newState.transitionSprite &&
+			  Global.sprites.ContainsKey($"{getMaverickPrefix()}_{newState.defaultSprite}")
+		  ) {
 			newState.sprite = newState.defaultSprite;
 			changeSpriteFromName(newState.defaultSprite, true);
 		}
@@ -1019,8 +1018,7 @@ public class Maverick : Actor, IDamagable {
 		Weapon? matchingW = player.weapons.FirstOrDefault(w => w.index == weaponToAdd.index);
 		if (matchingW != null) {
 			matchingW.ammo = matchingW.maxAmmo;
-		}
-		else if (player.weapons.Count >= 3 && player.weapons.Count < 9) {
+		} else if (player.weapons.Count >= 3 && player.weapons.Count < 9) {
 			player.weapons.Insert(3, weaponToAdd);
 		}
 	}

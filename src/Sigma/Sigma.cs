@@ -585,7 +585,7 @@ public class BaseSigma : Character {
 		}
 		// Regular prices for humans.
 		return mw.trueControlMode switch {
-			MaverickModeId.TagTeam => 5,
+			MaverickModeId.TagTeam => 0,
 			MaverickModeId.Striker => 0,
 			_ => 3
 		};

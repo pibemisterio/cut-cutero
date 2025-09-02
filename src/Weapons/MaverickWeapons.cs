@@ -87,20 +87,28 @@ public class MaverickWeapon : Weapon {
 		// X1
 		if (this is ChillPenguinWeapon) {
 			maverick = new ChillPenguin(player, pos, destPos, xDir, player.getNextActorNetId(), true, sendRpc: true);
+
 		} else if (this is X4DragoonWeapon) {
 			maverick = new X4Dragoon(player, pos, destPos, xDir, player.getNextActorNetId(), true, sendRpc: true);
-		} else if (this is ArmoredArmadilloWeapon) {
-			maverick = new ArmoredArmadillo(player, pos, destPos, xDir, player.getNextActorNetId(), true, sendRpc: true);
-		} else if (this is LaunchOctopusWeapon) {
-			maverick = new LaunchOctopus(player, pos, destPos, xDir, player.getNextActorNetId(), true, sendRpc: true);
-		} else if (this is BoomerangKuwangerWeapon) {
-			maverick = new BoomerangKuwanger(player, pos, destPos, xDir, player.getNextActorNetId(), true, sendRpc: true);
+
+		} else if (this is X4StingrayWeapon) {
+			maverick = new X4Stingray(player, pos, destPos, xDir, player.getNextActorNetId(), true, sendRpc: true);
+
+		} else if (this is X4MushroomWeapon) {
+			maverick = new X4Mushroom(player, pos, destPos, xDir, player.getNextActorNetId(), true, sendRpc: true);
+
+		} else if (this is X4SpiderWeapon) {
+			maverick = new X4Spider(player, pos, destPos, xDir, player.getNextActorNetId(), true, sendRpc: true);
+
 		} else if (this is StingChameleonWeapon) {
 			maverick = new StingChameleon(player, pos, destPos, xDir, player.getNextActorNetId(), true, sendRpc: true);
+
 		} else if (this is StormEagleWeapon) {
 			maverick = new StormEagle(player, pos, destPos, xDir, player.getNextActorNetId(), true, sendRpc: true);
-		} else if (this is FlameMammothWeapon) {
-			maverick = new FlameMammoth(player, pos, destPos, xDir, player.getNextActorNetId(), true, sendRpc: true);
+
+		} else if (this is X4PeacockWeapon) {
+			maverick = new X4Peacock(player, pos, destPos, xDir, player.getNextActorNetId(), true, sendRpc: true);
+
 		} else if (this is VelguarderWeapon) {
 			maverick = new Velguarder(player, pos, destPos, xDir, player.getNextActorNetId(), true, sendRpc: true);
 		}
@@ -219,10 +227,46 @@ public class SparkMandrillWeapon : MaverickWeapon {
 		displayName = "Spark Mandrill";
 	}
 }
+public class X4MushroomWeapon : MaverickWeapon {
+	public static X4MushroomWeapon netWeapon = new();
+
+	public X4MushroomWeapon(Player? player = null, int controlMode = 0) : base(player, controlMode) {
+		index = (int)WeaponIds.X4Dragoon;
+		weaponSlotIndex = 67;
+		displayName = "Spark Mandrill";
+	}
+}
+public class X4PeacockWeapon : MaverickWeapon {
+	public static X4PeacockWeapon netWeapon = new();
+
+	public X4PeacockWeapon(Player? player = null, int controlMode = 0) : base(player, controlMode) {
+		index = (int)WeaponIds.X4Dragoon;
+		weaponSlotIndex = 67;
+		displayName = "Spark Mandrill";
+	}
+}
+public class X4StingrayWeapon : MaverickWeapon {
+	public static X4StingrayWeapon netWeapon = new();
+
+	public X4StingrayWeapon(Player? player = null, int controlMode = 0) : base(player, controlMode) {
+		index = (int)WeaponIds.X4Dragoon;
+		weaponSlotIndex = 67;
+		displayName = "Spark Mandrill";
+	}
+}
 public class X4DragoonWeapon : MaverickWeapon {
 	public static X4DragoonWeapon netWeapon = new();
 
 	public X4DragoonWeapon(Player? player = null, int controlMode = 0) : base(player, controlMode) {
+		index = (int)WeaponIds.X4Dragoon;
+		weaponSlotIndex = 67;
+		displayName = "Spark Mandrill";
+	}
+}
+public class X4SpiderWeapon : MaverickWeapon {
+	public static X4SpiderWeapon netWeapon = new();
+
+	public X4SpiderWeapon(Player? player = null, int controlMode = 0) : base(player, controlMode) {
 		index = (int)WeaponIds.X4Dragoon;
 		weaponSlotIndex = 67;
 		displayName = "Spark Mandrill";

@@ -466,6 +466,8 @@ public class BHornetShootCursorState : HornetMState {
 		maverick.useGravity = true;
 	}
 }
+#region CURSOOOOOOOR
+	
 
 public class BHornetCursorProj : Projectile {
 	public BlastHornet bh;
@@ -567,7 +569,7 @@ public class BHornetCursorProj : Projectile {
 		target = Global.level.getActorByNetId(targetNetId);
 	}
 }
-
+#endregion
 public class BHornetShoot2State : HornetMState {
 	bool shotOnce;
 	Actor? target;

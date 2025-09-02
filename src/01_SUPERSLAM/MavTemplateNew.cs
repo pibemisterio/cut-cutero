@@ -6,17 +6,6 @@ namespace MMXOnline;
 
 public class X4Template : Maverick {
     public static Weapon getWeapon() { return new Weapon(WeaponIds.FakeZeroGeneric, 150); }
-    public float dashDist;
-    public float baseSpeed = 50;
-    public float accSpeed;
-    public int lastDirX;
-    // public Anim? exhaust;
-    public float topSpeed = 200;
-    public int shootNum = 0;
-
-    // Ammo uses.
-    public static int shootLv2Ammo = 3;
-    public static int shootLv3Ammo = 4;
 
     // Main creation function.
     public X4Template(
@@ -70,7 +59,7 @@ public class X4Template : Maverick {
             changeState(new FakeZeroShootState(), false);
             return true;
         }
-        if (input.isPressed(Control.Special1, player) && ammo >= shootLv3Ammo) {
+        if (input.isPressed(Control.Special1, player)) {
             changeState(new FakeZeroMeleeState());
             return true;
         }
@@ -89,15 +78,12 @@ public class X4Template : Maverick {
 
 
     public override float getRunSpeed() {
-        float retSpeed = baseSpeed + accSpeed;
-        if (retSpeed > Physics.WalkSpeed) {
-            return retSpeed;
-        }
-        return Physics.WalkSpeed;
+
+        return 111;
     }
 
     public override string getMaverickPrefix() {
-        return "fakezero";
+        return "mav_x4";
     }
 
     public override MaverickState[] strikerStates() {

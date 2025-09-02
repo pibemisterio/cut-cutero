@@ -130,6 +130,9 @@ public bool isInvincible(Player attacker, int? projId) { return false; }
 public bool canBeHealed(int healerAlliance) { return false; }
 public void heal(Player healer, float healAmount, bool allowStacking = true, bool drawHealText = false) { }
 public bool isPlayableDamagable() { return false; }
+========================================================= comment a selection / block  =====================================================
+
+           ctrl+K, then ctrl+C
 
 ========================================================= Change Char Collider  =========================================================
 
@@ -177,18 +180,18 @@ public class TemplateCharstate : CharState {
 =========================================================  MavState  =========================================================
 
 #region ■ MavState ━━━━━
-public class MavState : MaverickState {
-    public X4Beast bestia = null!;
-  //bool startedGrounded;
+public class Mushroom : MaverickState {
+    public X4Mushroom minepe = null!;
+    //bool startedGrounded;
 
-    public MavState() : base("1atk") {
-  //public MavState(bool startedGrounded) : base(startedGrounded ? "1atk" : "1atk_air") {
-  //this.startedGrounded = startedGrounded;
+    public Mushroom() : base("1atk") {
+        //public MavState(bool startedGrounded) : base(startedGrounded ? "1atk" : "1atk_air") {
+        //this.startedGrounded = startedGrounded;
     }
 
     public override void onEnter(MaverickState oldState) {
         base.onEnter(oldState);
-        bestia = maverick as X4Beast ?? throw new NullReferenceException();
+        minepe = maverick as X4Mushroom ?? throw new NullReferenceException();
         maverick.stopMoving();
     }
 
@@ -199,7 +202,7 @@ public class MavState : MaverickState {
             maverick.changeState(new MIdle());
         }
     }
-    
+
     public override void onExit(MaverickState newState) {
         base.onExit(newState);
     }
