@@ -76,14 +76,12 @@ public class X4Peacock : Maverick {
 
         }
         if (input.isPressed(Control.Special1, player)) {
-            if (cursor != null) {
-                if (cursor.targetLocked != null) {
-                    changeState(new PeacockRaku(cursor.targetLocked));
-                    return true;
-                }
-            } else {
-                //  changeState(new PeacockFireCursor(startedGrounded: this.grounded)); peacock thing
-            }
+
+            changeState(new PeacockRaku());
+            return true;
+
+
+
         }
         if (input.isPressed(Control.Dash, player)) {
             if (cursor != null) {
@@ -340,10 +338,12 @@ public class PeacockFireFeather : MaverickState {
 #region ■ PeacockRaku ━━━
 public class PeacockRaku : MaverickState {
     public X4Peacock picapau = null!;
-    Actor? targetFromLock;
+    PeacockTeleportProj? leftTP;
+    PeacockTeleportProj? downTP;
+    PeacockTeleportProj? rightTP;
     bool hasTeleported;
-    public PeacockRaku(Actor? targetFromLock) : base("2spc_raku") {
-        this.targetFromLock = targetFromLock;
+    public PeacockRaku() : base("2spc_raku") {
+
         superArmor = true;
     }
 
@@ -352,15 +352,29 @@ public class PeacockRaku : MaverickState {
         picapau = maverick as X4Peacock ?? throw new NullReferenceException();
         maverick.stopMoving();
         maverick.useGravity = false;
+        if (!maverick.grounded) {
+            leftTP = new PeacockTeleportProj(maverick.pos, maverick.xDir, 0, maverick, player, player.getNextActorNetId(), true);
+            downTP = new PeacockTeleportProj(maverick.pos, maverick.xDir, 1, maverick, player, player.getNextActorNetId(), true);
+            rightTP = new PeacockTeleportProj(maverick.pos, maverick.xDir, 2, maverick, player, player.getNextActorNetId(), true);
+        }
     }
     bool hasFired;
     public override void update() {
         base.update();
-        if (maverick.frameIndex >= 10 && targetFromLock != null && !hasTeleported) {
-            maverick.changePos(targetFromLock.pos);
+
+        if (maverick.frameIndex >= 12 && !hasTeleported) {
+            maverick.useGravity = true;
             hasTeleported = true;
+            if (maverick.input.isHeld(Control.Left, maverick.player) && leftTP != null) {
+                maverick.changePos(leftTP.pos);
+
+            } else if (maverick.input.isHeld(Control.Right, maverick.player) && rightTP != null) {
+                maverick.changePos(rightTP.pos);
+            } else if (downTP != null) {
+                maverick.changePos(downTP.pos);
+            }
         }
-        if (maverick.frameIndex >= 17 && !hasFired) {
+        if (maverick.frameIndex >= 20 && !hasFired) {
             hasFired = true;
             new PeacockRakuProj(maverick.pos, maverick.xDir, maverick, player, player.getNextActorNetId(), true);
         }
@@ -371,7 +385,7 @@ public class PeacockRaku : MaverickState {
 
     public override void onExit(MaverickState newState) {
         base.onExit(newState);
-        maverick.useGravity = false;
+        maverick.useGravity = true;
     }
 }
 #endregion
@@ -384,6 +398,7 @@ public class PeacockTailJump : MaverickState {
     bool hasTeleported;
     bool hasCreatedProj;
     float verticalMovement = -500;
+    float horizontalInputMove = 50;
 
 
 
@@ -403,7 +418,7 @@ public class PeacockTailJump : MaverickState {
         base.update();
 
 
-        if (maverick.frameIndex >= 7 && targetFromLock != null && !hasTeleported) {
+        if (maverick.frameIndex >= 6 && targetFromLock != null && !hasTeleported) {
             maverick.changePos(targetFromLock.pos);
             hasTeleported = true;
         }
@@ -412,9 +427,12 @@ public class PeacockTailJump : MaverickState {
             maverick.move(new Point(0, verticalMovement));
             verticalMovement = Helpers.lerp(verticalMovement, 0, Global.spf * 5.5f);
         }
-        if (maverick.frameIndex >= 15 && !hasCreatedProj) {
-            hasCreatedProj = true;
-            proj = new TailBladeProj(maverick.pos, maverick.xDir, maverick, player, player.getNextActorNetId(), true);
+        if (maverick.frameIndex >= 15) {
+            maverick.move(new Point((player.input.getInputDir(this.player).x * horizontalInputMove), 0));
+            if (!hasCreatedProj) {
+                hasCreatedProj = true;
+                proj = new TailBladeProj(maverick.pos, maverick.xDir, maverick, player, player.getNextActorNetId(), true);
+            }
         }
         if (stateTime > 1f) { //not frame index because uuh should be around frame 15 not 16
             attackCtrl = true;
@@ -737,6 +755,75 @@ public class PeacockRakuProj : Projectile {
     }
 }
 #endregion
+
+
+
+#region ⬤ Teleport Proj ━━━
+public class PeacockTeleportProj : Projectile {
+    private int projSpeed = 700;
+    //public int type;
+    public PeacockTeleportProj(
+        Point pos, int xDir, int type, Actor owner, Player player, ushort? netId, bool rpc = false
+    ) : base(
+        pos, xDir, owner, "empty", netId, player
+    ) {
+        //this.type = type;
+        weapon = FakeZero.getWeapon();
+        projId = (int)ProjIds.GaeaShield;
+        damager.damage = 0;
+        damager.flinch = Global.defFlinch;
+        damager.hitCooldown = 30;
+        vel = Point.zero;
+        maxTime = 1.2f;
+        destroyOnHit = false;
+        destroyOnHitWall = false;
+        globalCollider = new Collider(
+            new Rect(0, 0, 15, 15).getPoints(),
+            true, this, false, false, HitboxFlag.Hitbox, Point.zero
+        );
+        switch (type) {
+            case 0:
+                vel = new Point(-projSpeed, projSpeed);
+                break;
+            case 1:
+                vel = new Point(0, projSpeed);
+                break;
+            case 2:
+                vel = new Point(projSpeed, projSpeed);
+                break;
+        }
+
+        if (rpc) {
+            rpcCreate(pos, owner, ownerPlayer, netId, xDir, (byte)type);
+        }
+    }
+
+    public static Projectile rpcInvoke(ProjParameters args) {
+        return new PeacockTeleportProj(
+            args.pos, args.xDir, args.extraData[0], args.owner, args.player, args.netId
+        );
+    }
+
+    public override void update() {
+        base.update();
+    }
+    public override void onHitWall(CollideData other) {
+        base.onHitWall(other);
+        if (other.isSideWallHit()) {
+            vel = new Point(0, projSpeed);
+        }
+        if (other.isGroundHit()) {
+            vel = Point.zero;
+            changeSprite("fx_grab_start", false);
+        }
+
+    }
+    public override void onDestroy() {
+        base.onDestroy();
+    }
+}
+#endregion
+
 #region ⬤ Tail Blade ━━━━
 public class TailBladeProj : Projectile {
     public X4Peacock picapau = null!;
