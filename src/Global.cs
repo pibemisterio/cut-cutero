@@ -78,7 +78,7 @@ miau preferedchar
 	public static int quickStartBotCharNum = 0;
 	                                       //X4SkyLagoon1  //training
 	public static bool _quickStart = true; //RXDFloatingRuins_md = true;
-	public static string quickStartMap = "highway";
+	public static string quickStartMap = "training";
 	public static bool quickStartMirrored = false;
 
 	// Training
