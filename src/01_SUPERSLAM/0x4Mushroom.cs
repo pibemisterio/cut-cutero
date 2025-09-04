@@ -399,15 +399,16 @@ public class MushroomCroutch : MaverickState { //aka spindash start
 
 #region ■ Spin Dash ━━━━
 public class MushroomSpinDash : MaverickState { //Copypasted from Run, but removing a lot of
-    public X4Mushroom minepe = null!;           //input hold  holding mechanics not present in sanic
+    public X4Mushroom minepe = null!;           //input holding mechanics not present in sanic
     private float storedXSpeed;
 
     private bool isHoldingDirection;
     private bool stoppedHoldingJump;
+    private bool shouldDeaccMore;
     private int lastXDir;
 
-
     private const float SPEED_DEACC = 160f; //not holding anything
+    private const float SPEED_DEACC_HOLDING = 420f;  //holding opposite direction to stop
     private const float SPEED_MAX = 300f;
 
 
@@ -428,52 +429,49 @@ public class MushroomSpinDash : MaverickState { //Copypasted from Run, but remov
     float jumpTime = 0;
     public override void update() {
         base.update();
-        //mimic stateTime
+        //mimic stateTime for jump handling
         if (!maverick.grounded) {
             jumpTime += Global.spf;
         } else {
             jumpTime = 0;
         }
 
-        isHoldingDirection = false;
-
-        //input move
-        if (maverick.input.isHeld(Control.Left, maverick.player)) {
-            maverick.xDir = -1;
-            isHoldingDirection = true;
-        } else if (maverick.input.isHeld(Control.Right, maverick.player)) {
-            maverick.xDir = 1;
-            isHoldingDirection = true;
-        }
-
         maverick.move(new Point((int)(storedXSpeed * maverick.xDir), 0));
 
+        if (maverick.xDir == -1 && maverick.input.isHeld(Control.Right, maverick.player) ||
+            maverick.xDir == 1 && maverick.input.isHeld(Control.Left, maverick.player)) {
+            shouldDeaccMore = true;
+        }
+        //flip when WALL hit
+        var hitWall = Global.level.checkTerrainCollisionOnce(maverick, 1 * maverick.xDir, -2);
+        if (hitWall?.isSideWallHit() == true) {
+            maverick.xDir *= -1;
+            float jumpXSpeed = Math.Abs(storedXSpeed) * 1;
+            maverick.vel.y = -maverick.getJumpPower() * Math.Abs(storedXSpeed) * 0.002f;
+
+        }
         //----------------------Movement Calculation------------------------------------
         //animation speed * math
         maverick.frameSpeed = Math.Max(1f, 1f * (storedXSpeed * 0.035f));
-        storedXSpeed = Math.Max(0, storedXSpeed - (Global.spf * SPEED_DEACC));
+        storedXSpeed = Math.Max(0, storedXSpeed - (Global.spf * (shouldDeaccMore ? SPEED_DEACC_HOLDING : SPEED_DEACC)));
 
-        if (lastXDir != maverick.xDir && isHoldingDirection) {
-            storedXSpeed = -storedXSpeed;
-        }
         if (maverick.grounded) {
             if (storedXSpeed <= 15f) {
                 maverick.changeState(new MIdle());
             }
-            if (storedXSpeed <= 200) {
+            if (storedXSpeed <= (shouldDeaccMore ? 60 : 240)) {
                 if (maverick.input.isHeld(Control.Left, maverick.player) || maverick.input.isHeld(Control.Right, maverick.player)) {
                     maverick.changeState(new MushroomRun(storedXSpeed));
                 }
             }
         }
         //----------------------Jump Controller------------------------------------
-
         if (maverick.input.isPressed(Control.Jump, maverick.player) && maverick.grounded) {
             maverick.vel.y = -maverick.getJumpPower() * 1.3f;
             jumpTime = 0;
             stoppedHoldingJump = false;
         }
-        if (jumpTime >= 0.06f) {
+        if (jumpTime >= 0.06f) { //buffer
             if (!player.input.isHeld(Control.Jump, player) || jumpTime >= 0.25f)
                 if (!stoppedHoldingJump) {
                     stoppedHoldingJump = true;
@@ -481,6 +479,7 @@ public class MushroomSpinDash : MaverickState { //Copypasted from Run, but remov
                     jumpTime = 0;
                 }
         }
+        
     }
 }
 #endregion
