@@ -67,7 +67,7 @@ public class X4Peacock : Maverick {
         if (input.isPressed(Control.Shoot, player)) {
             if (cursor != null) {
                 if (cursor.targetLocked != null) {
-                    changeState(new PeacockFireFeather(cursor.targetLocked, fromLoop: false, startedGrounded: this.grounded));
+                    changeState(new PeacockFireFeather(cursor.targetLocked, fromLoop: false));
                     return false; //prevent canceling own feather state with feather state
                 }
             } else {
@@ -86,8 +86,6 @@ public class X4Peacock : Maverick {
                 changeState(new PeacockFireCursor(startedGrounded: this.grounded));
             }
             return true;
-
-
 
         }
         if (input.isPressed(Control.Dash, player)) {
@@ -166,13 +164,12 @@ public class X4Peacock : Maverick {
 
 
 
+
 #region ■ Hover ━━━━━
 public class PeacockHover : MaverickState {
     public X4Peacock picapau = null!;
     float hoverSpeed = 120;
-    float acceleration = 0.2f;
-    float deceleration = 0.1f;
-    float currentVelocity = 0;
+    float horizontalInputMove = 125;
 
     public PeacockHover() : base("fly") {
     }
@@ -182,31 +179,47 @@ public class PeacockHover : MaverickState {
         picapau = maverick as X4Peacock ?? throw new NullReferenceException();
         maverick.stopMoving();
         maverick.useGravity = false;
-        currentVelocity = 0;
     }
 
     public override void update() {
         base.update();
+        controller();
 
-        float targetVelocity = 0;
-
-
-        if (player.input.isHeld(Control.Left, player)) {
-            targetVelocity = -hoverSpeed;
-        } else if (player.input.isHeld(Control.Right, player)) {
-            targetVelocity = hoverSpeed;
-        }
-        if (Math.Abs(targetVelocity) > 0.1f) {
-            currentVelocity = Helpers.lerp(currentVelocity, targetVelocity, acceleration);
-        } else {
-            currentVelocity = Helpers.lerp(currentVelocity, 0, deceleration);
-        }
-        if (Math.Abs(currentVelocity) > 0.1f) {
-            maverick.move(new Point(currentVelocity, 0));
-        }
+    }
+    private void controller() {
+        // ----------------- Movement -----------------------
+        maverick.move(new Point((player.input.getInputDir(this.player).x * horizontalInputMove), 0));
 
         if (player.input.isPressed(Control.Jump, player) && stateTime > 0.2f) {
             maverick.changeState(new MFall());
+        }
+        //  ------------------- Attack -----------------------
+        if (player.input.isPressed(Control.Shoot, player)) {
+            if (picapau.cursor != null) {
+                if (picapau.cursor.targetLocked != null) {
+                    maverick.changeState(new PeacockFireFeather(picapau.cursor.targetLocked, fromLoop: true));
+                }
+            } else {
+                maverick.changeState(new PeacockFireCursor(startedGrounded: maverick.grounded));
+            }
+        }
+        if (player.input.isPressed(Control.Special1, player)) {
+            if (picapau.cursor != null) {
+                if (picapau.cursor.targetLocked != null) {
+                    maverick.changeState(new PeacockRaku(picapau.cursor.targetLocked));
+                }
+            } else {
+                maverick.changeState(new PeacockFireCursor(startedGrounded: maverick.grounded));
+            }
+        }
+        if (player.input.isPressed(Control.Dash, player)) {
+            if (picapau.cursor != null) {
+                if (picapau.cursor.targetLocked != null) {
+                    maverick.changeState(new PeacockTailJump(picapau.cursor.targetLocked));
+                }
+            } else {
+                maverick.changeState(new PeacockFireCursor(startedGrounded: maverick.grounded));
+            }
         }
     }
 
@@ -217,12 +230,12 @@ public class PeacockHover : MaverickState {
 }
 #endregion
 
-
-
 #region ■ State Cursor ━━━
 public class PeacockFireCursor : MaverickState {
     public X4Peacock picapau = null!;
+    bool wasHovering;
     bool hasShot;
+    float horizontalInputMove = 80;
 
     public PeacockFireCursor(bool startedGrounded) : base(startedGrounded ? "1atk_cursor" : "1atk_cursor_air") {
         landSprite = "1atk_feather";
@@ -234,15 +247,23 @@ public class PeacockFireCursor : MaverickState {
         picapau = maverick as X4Peacock ?? throw new NullReferenceException();
         maverick.stopMoving();
         maverick.useGravity = false;
+        if (oldState is PeacockHover) wasHovering = true;
     }
     public override void update() {
         base.update();
+        if (!maverick.grounded) {
+            maverick.move(new Point((player.input.getInputDir(this.player).x * horizontalInputMove), 0));
+        }
         if (maverick.frameIndex >= 0 && !hasShot) {
             hasShot = true;
             fireCursor();
         }
         if (maverick.isAnimOver()) {
-            maverick.changeToIdleOrFall();
+            if (wasHovering) {
+                maverick.changeState(new PeacockHover());
+            } else {
+                maverick.changeToIdleOrFall();
+            }
         }
     }
     private void fireCursor() {
@@ -262,21 +283,19 @@ public class PeacockFireCursor : MaverickState {
 }
 #endregion
 
-#region ■ State Feather ━━
+#region ■ Fire Feather ━━━
 public class PeacockFireFeather : MaverickState {
     public X4Peacock picapau = null!;
     Actor? targetFromLock;
+    bool wasHovering;
     bool hasShot;
     bool fromLoop;
-    int flySpeed = 90;
+    float horizontalInputMove = 80;
 
 
-    public PeacockFireFeather(Actor? targetFromLock, bool fromLoop, bool startedGrounded) : base(startedGrounded ? "1atk_feather" : "1atk_feather") {
+    public PeacockFireFeather(Actor? targetFromLock, bool fromLoop) : base("1atk_feather") {
         this.targetFromLock = targetFromLock;
         this.fromLoop = fromLoop;
-        landSprite = "1atk_feather";
-        airSprite = "1atk_feather";
-
     }
 
     public override void onEnter(MaverickState oldState) {
@@ -284,6 +303,7 @@ public class PeacockFireFeather : MaverickState {
         picapau = maverick as X4Peacock ?? throw new NullReferenceException();
         maverick.stopMoving();
         maverick.useGravity = false;
+        if (oldState is PeacockHover) wasHovering = true;
         if (fromLoop) { //basically if holding, redo the state from a better frame
                         //we do not loop inside the same state instance to REASIGN cursor.targetFromLock
             maverick.frameIndex = 4;
@@ -301,11 +321,15 @@ public class PeacockFireFeather : MaverickState {
         }
         if (picapau.cursor != null) {
             if (maverick.frameIndex == 12 && player.input.isHeld(Control.Shoot, player) && picapau.cursor.targetLocked != null) {
-                maverick.changeState(new PeacockFireFeather(picapau.cursor.targetLocked, fromLoop: true, startedGrounded: maverick.grounded));
+                maverick.changeState(new PeacockFireFeather(picapau.cursor.targetLocked, fromLoop: true));
             }
         }
         if (maverick.isAnimOver()) {
-            maverick.changeToIdleOrFall();
+            if (wasHovering) {
+                maverick.changeState(new PeacockHover());
+            } else {
+                maverick.changeToIdleOrFall();
+            }
         }
         if (maverick.frameIndex >= 10) {
             attackCtrl = true;
@@ -313,16 +337,8 @@ public class PeacockFireFeather : MaverickState {
     }
     private void movementControl() {
 
-
-
         if (!maverick.grounded) {
-            if (player.input.isHeld(Control.Left, player)) {
-                maverick.move(new Point(-flySpeed, 0));
-            }
-            if (player.input.isHeld(Control.Right, player)) {
-                maverick.move(new Point(flySpeed, 0));
-            }
-
+            maverick.move(new Point((player.input.getInputDir(this.player).x * horizontalInputMove), 0));
         }
     }
     private void fireFeather() {
@@ -342,6 +358,7 @@ public class PeacockFireFeather : MaverickState {
 }
 #endregion
 
+#region ■ State Raku ━━━━
 public class PeacockRaku : MaverickState {
     public X4Peacock picapau = null!;
     Actor? targetFromLock;
@@ -374,7 +391,6 @@ public class PeacockRaku : MaverickState {
                 teleportPos = groundHit.hitData.hitPoint.Value;
             }
 
-
             maverick.changePos(teleportPos);
             hasTeleported = true;
         }
@@ -392,8 +408,9 @@ public class PeacockRaku : MaverickState {
         maverick.useGravity = true;
     }
 }
+#endregion
 
-#region ■ Tail Jump ━━━
+#region ■ Tail Jump ━━━━
 public class PeacockTailJump : MaverickState {
     public X4Peacock picapau = null!;
     Actor? targetFromLock;
