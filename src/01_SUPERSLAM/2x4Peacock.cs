@@ -397,6 +397,11 @@ public class PeacockRaku : MaverickState {
         if (maverick.frameIndex >= 17 && !hasFired) {
             hasFired = true;
             new PeacockRakuProj(maverick.pos, maverick.xDir, maverick, player, player.getNextActorNetId(), true);
+            new Anim(maverick.pos.addxy(0,5), "mav_x4pck_2spc_raku_fx", 1, null, true) {
+                yScale = 0.5f,
+                zIndex = picapau.zIndex - 30
+            };
+
         }
         if (maverick.isAnimOver()) {
             maverick.changeState(new MIdle());
@@ -419,8 +424,6 @@ public class PeacockTailJump : MaverickState {
     bool hasCreatedProj;
     float verticalMovement = -500;
     float horizontalInputMove = 50;
-
-
 
     public PeacockTailJump(Actor? targetFromLock) : base("3dash_jump") {
         this.targetFromLock = targetFromLock;
@@ -615,7 +618,7 @@ public class HomingFeather : Projectile {
         this.targetFromLock = targetFromLock;
         xScale = xDir == -1 ? -1 : 1;
         this.angle = this.xDir == -1 ? 180 : 0;
-
+        new Anim(pos, "mav_x4pck_1atk_feather_muzzle", xDir, null, true);
 
         if (targetFromLock == null) {
             targetFromLock = Global.level.getClosestTarget(pos, player.alliance, false, 550);
@@ -636,7 +639,7 @@ public class HomingFeather : Projectile {
     }
     public override void onStart() {
         base.onStart();
-        new Anim(pos, "mav_x4pck_1atk_feather_muzzle", xDir, null, true);
+
     }
     public override void preUpdate() {
         base.preUpdate();
