@@ -77,7 +77,14 @@ public class X4Peacock : Maverick {
         }
         if (input.isPressed(Control.Special1, player)) {
 
-            changeState(new PeacockRaku());
+            if (cursor != null) {
+                if (cursor.targetLocked != null) {
+                    changeState(new PeacockRaku(cursor.targetLocked));
+                    return false; //prevent canceling own feather state with feather state
+                }
+            } else {
+                changeState(new PeacockFireCursor(startedGrounded: this.grounded));
+            }
             return true;
 
 
@@ -106,7 +113,7 @@ public class X4Peacock : Maverick {
 
     public override float getRunSpeed() {
 
-        return 100;
+        return 125;
     }
 
     public override string getMaverickPrefix() {
@@ -335,15 +342,13 @@ public class PeacockFireFeather : MaverickState {
 }
 #endregion
 
-#region ■ PeacockRaku ━━━
 public class PeacockRaku : MaverickState {
     public X4Peacock picapau = null!;
-    PeacockTeleportProj? leftTP;
-    PeacockTeleportProj? downTP;
-    PeacockTeleportProj? rightTP;
-    bool hasTeleported;
-    public PeacockRaku() : base("2spc_raku") {
+    Actor? targetFromLock;
 
+    bool hasTeleported;
+    public PeacockRaku(Actor? targetFromLock) : base("2spc_raku") {
+        this.targetFromLock = targetFromLock;
         superArmor = true;
     }
 
@@ -352,29 +357,28 @@ public class PeacockRaku : MaverickState {
         picapau = maverick as X4Peacock ?? throw new NullReferenceException();
         maverick.stopMoving();
         maverick.useGravity = false;
-        if (!maverick.grounded) {
-            leftTP = new PeacockTeleportProj(maverick.pos, maverick.xDir, 0, maverick, player, player.getNextActorNetId(), true);
-            downTP = new PeacockTeleportProj(maverick.pos, maverick.xDir, 1, maverick, player, player.getNextActorNetId(), true);
-            rightTP = new PeacockTeleportProj(maverick.pos, maverick.xDir, 2, maverick, player, player.getNextActorNetId(), true);
-        }
+
     }
     bool hasFired;
     public override void update() {
         base.update();
 
-        if (maverick.frameIndex >= 12 && !hasTeleported) {
+        if (maverick.frameIndex >= 7 && !hasTeleported) {
             maverick.useGravity = true;
-            hasTeleported = true;
-            if (maverick.input.isHeld(Control.Left, maverick.player) && leftTP != null) {
-                maverick.changePos(leftTP.pos);
 
-            } else if (maverick.input.isHeld(Control.Right, maverick.player) && rightTP != null) {
-                maverick.changePos(rightTP.pos);
-            } else if (downTP != null) {
-                maverick.changePos(downTP.pos);
+            Point teleportPos = targetFromLock.pos;
+
+            var groundHit = Global.level.raycast(targetFromLock.pos, targetFromLock.pos.addxy(0, 1000), new List<Type>() { typeof(Wall) });
+
+            if (groundHit?.hitData?.hitPoint != null) {
+                teleportPos = groundHit.hitData.hitPoint.Value;
             }
+
+
+            maverick.changePos(teleportPos);
+            hasTeleported = true;
         }
-        if (maverick.frameIndex >= 20 && !hasFired) {
+        if (maverick.frameIndex >= 17 && !hasFired) {
             hasFired = true;
             new PeacockRakuProj(maverick.pos, maverick.xDir, maverick, player, player.getNextActorNetId(), true);
         }
@@ -388,7 +392,6 @@ public class PeacockRaku : MaverickState {
         maverick.useGravity = true;
     }
 }
-#endregion
 
 #region ■ Tail Jump ━━━
 public class PeacockTailJump : MaverickState {
@@ -418,7 +421,7 @@ public class PeacockTailJump : MaverickState {
         base.update();
 
 
-        if (maverick.frameIndex >= 6 && targetFromLock != null && !hasTeleported) {
+        if (maverick.frameIndex >= 7 && targetFromLock != null && !hasTeleported) {
             maverick.changePos(targetFromLock.pos);
             hasTeleported = true;
         }
@@ -524,7 +527,7 @@ public class HomingCursor : Projectile {
                 }
             }
             if (time >= 0.15) {
-                targetHoming = Global.level.getClosestTarget(pos, damager.owner.alliance, true, aMaxDist: 300);
+                targetHoming = Global.level.getClosestTarget(pos, damager.owner.alliance, true, aMaxDist: 600);
             } else if (time < 0.15) {
                 //this.vel.x += this.xDir * Global.spf * 300;
             }
@@ -614,7 +617,10 @@ public class HomingFeather : Projectile {
             args.pos, args.xDir, null, args.owner, args.player, args.netId
         );
     }
-
+    public override void onStart() {
+        base.onStart();
+        new Anim(pos, "mav_x4pck_1atk_feather_muzzle", xDir, null, true);
+    }
     public override void preUpdate() {
         base.preUpdate();
         updateProjectileCooldown();
@@ -646,15 +652,9 @@ public class HomingFeather : Projectile {
 #region ⬤ Explo ━━━━━━
 public class HomingFeatherExplo : Projectile {
     private List<Point> partPositions = new List<Point>() {
-        new Point(-16, -16),
-        new Point(0, -16),
-        new Point(16, -16),
-        new Point(-16, 0),
-        new Point(0, 0),
-        new Point(16, 0),
-        new Point(-16, 16),
-        new Point(0, 16),
-        new Point(16, 16)
+        new Point(-16, -16), new Point(0, -16),new Point(16, -16),
+        new Point(-16, 0), new Point(0, 0), new Point(16, 0),
+        new Point(-16, 16), new Point(0, 16), new Point(16, 16)
     };
 
     private Random random = new Random();
@@ -724,7 +724,7 @@ public class PeacockRakuProj : Projectile {
         pos, xDir, owner, "mav_x4pck_2spc_raku_proj", netId, player
     ) {
         weapon = FakeZero.getWeapon();
-        projId = (int)ProjIds.GaeaShield;
+        projId = (int)ProjIds.FakeZeroBuster;
         damager.damage = 2;
         damager.flinch = Global.defFlinch;
         damager.hitCooldown = 15;
@@ -732,7 +732,6 @@ public class PeacockRakuProj : Projectile {
         maxTime = 0.7f;
         destroyOnHit = false;
         destroyOnHitWall = false;
-
 
         if (rpc) {
             rpcCreate(pos, owner, ownerPlayer, netId, xDir);
@@ -744,6 +743,8 @@ public class PeacockRakuProj : Projectile {
             args.pos, args.xDir, args.owner, args.player, args.netId
         );
     }
+
+
 
     public override void update() {
         base.update();
@@ -760,8 +761,8 @@ public class PeacockRakuProj : Projectile {
 
 #region ⬤ Teleport Proj ━━━
 public class PeacockTeleportProj : Projectile {
-    private int projSpeed = 700;
     //public int type;
+    bool hasHitGround;
     public PeacockTeleportProj(
         Point pos, int xDir, int type, Actor owner, Player player, ushort? netId, bool rpc = false
     ) : base(
@@ -774,7 +775,7 @@ public class PeacockTeleportProj : Projectile {
         damager.flinch = Global.defFlinch;
         damager.hitCooldown = 30;
         vel = Point.zero;
-        maxTime = 1.2f;
+        maxTime = 0.4f;
         destroyOnHit = false;
         destroyOnHitWall = false;
         globalCollider = new Collider(
@@ -783,13 +784,13 @@ public class PeacockTeleportProj : Projectile {
         );
         switch (type) {
             case 0:
-                vel = new Point(-projSpeed, projSpeed);
+                vel = new Point(-900, 700);
                 break;
             case 1:
-                vel = new Point(0, projSpeed);
+                vel = new Point(0, 700);
                 break;
             case 2:
-                vel = new Point(projSpeed, projSpeed);
+                vel = new Point(900, 700);
                 break;
         }
 
@@ -804,17 +805,26 @@ public class PeacockTeleportProj : Projectile {
         );
     }
 
+    float partTime;
     public override void update() {
         base.update();
+        partTime += Global.spf;
+        if (partTime >= 0.02f && !hasHitGround) {
+            partTime = 0;
+            new Anim(pos.addxy(0, -25), "mav_x4pck_2spc_teleport_fx", 1, null, true) {
+                //kill sprite before it loops, the loop is used on the proj sprite
+                ttl = 0.23f
+            };
+        }
     }
     public override void onHitWall(CollideData other) {
         base.onHitWall(other);
         if (other.isSideWallHit()) {
-            vel = new Point(0, projSpeed);
+            vel = new Point(0, 700);
         }
         if (other.isGroundHit()) {
             vel = Point.zero;
-            changeSprite("fx_grab_start", false);
+            hasHitGround = true;
         }
 
     }
