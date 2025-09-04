@@ -295,15 +295,36 @@ public class MushroomJump : MaverickState {
                     }
                 }
         }
+
         //double jump
-        if (stateTime >= 0.02f && maverick.input.isPressed(Control.Jump, maverick.player)) {
-            if (!isDoubleJump) {
+        if (stateTime >= 0.02f && maverick.input.isPressed(Control.Jump, maverick.player) && !isDoubleJump) {
+            // hardcoded moving to the left then jumping to the rigth
+            if (maverick.input.isHeld(Control.Right, maverick.player) && maverick.xDir == 1 && storedXSpeed < 0) {
+                maverick.changeState(new MushroomJump(storedXSpeed * -1, isDoubleJump: true));
+            }
+            // hardcoded moving to the right then jumping to the left
+            else if (maverick.input.isHeld(Control.Left, maverick.player) && maverick.xDir == -1 && storedXSpeed < 0) {
+                maverick.changeState(new MushroomJump(storedXSpeed * -1, isDoubleJump: true));
+            } else {
+                // if not jump normally.... papu wtF
                 maverick.changeState(new MushroomJump(storedXSpeed, isDoubleJump: true));
             }
         }
+
         //end when grounded
         if (maverick.grounded && stateTime >= 0.1f) {
-            maverick.changeState(new MushroomRun(Math.Abs(storedXSpeed)));
+            //hardcoded canceling momentum if holding the opposite direction
+            if (maverick.input.isHeld(Control.Right, maverick.player) && maverick.xDir == 1 && storedXSpeed < 0) {
+                maverick.changeState(new MushroomRun(0));
+            }
+            //same here
+            else if (maverick.input.isHeld(Control.Left, maverick.player) && maverick.xDir == -1 && storedXSpeed < 0) {
+                maverick.changeState(new MushroomRun(0));
+            } else {
+                // if not jump normally.... papu wtF santos skibidis hardcoderos
+                maverick.changeState(new MushroomRun(storedXSpeed));
+            }
+
         }
     }
 }
@@ -439,7 +460,7 @@ public class MushroomSpinDash : MaverickState { //Copypasted from Run, but remov
             if (storedXSpeed <= 15f) {
                 maverick.changeState(new MIdle());
             }
-            if (storedXSpeed <= 30) {
+            if (storedXSpeed <= 200) {
                 if (maverick.input.isHeld(Control.Left, maverick.player) || maverick.input.isHeld(Control.Right, maverick.player)) {
                     maverick.changeState(new MushroomRun(storedXSpeed));
                 }
