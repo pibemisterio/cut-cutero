@@ -637,7 +637,23 @@ public class MushrenzanProj : Projectile {
 
 #region ⬤ Mushroom Body ━
 public class MushroomBodyProj : Projectile {
-    private bool hasLandedOnce;
+    public Actor? target;
+
+    private bool hasFallen;
+    private bool hasLanded;
+    private bool hasIdled;
+    private bool hasJumped;
+    private bool hasSetWaitingSprite;
+    private bool hasSetMaxtimeAfterTargeting;
+    private bool hasSetDirectionToTarget;
+
+    private int frameCount;
+    private int jumpCounter;
+    private float customAngle;
+
+    private const float JUMP_MOD = 0.6f;
+    private const float HOMING_SPEED = 400;
+    private const float TIME_WAITING_FOR_TARGET = 1.2f;
 
     public MushroomBodyProj(
         Point pos, int xDir, Actor owner, Player player, ushort? netId, bool rpc = false
@@ -646,18 +662,18 @@ public class MushroomBodyProj : Projectile {
     ) {
         weapon = FakeZero.getWeapon();
         projId = (int)ProjIds.GBeetleGravityWell;
+        vel = new Point((65 + new Random().Next(-25, 26)) * xDir, -200 + new Random().Next(-30, 31));
+        maxTime = 4f;
         damager.damage = 2;
         damager.flinch = Global.defFlinch;
-        damager.hitCooldown = 30;
-        vel = new Point((65 + new Random().Next(-25, 26)) * xDir, -200 + new Random().Next(-30, 31));
-        maxTime = 3.2f;
         //----------------------------//       
+        frameSpeed = 0.8f;
         useGravity = true;
-        gravityModifier = 0.5f;
+        gravityModifier = 0.65f;
         destroyOnHit = true;
         destroyOnHitWall = false;
-
-
+        fadeSprite = "mav_x4mrm_1atk_body_fade";
+        fadeOnAutoDestroy = true;
 
         if (rpc) {
             rpcCreate(pos, owner, ownerPlayer, netId, xDir);
@@ -672,21 +688,91 @@ public class MushroomBodyProj : Projectile {
 
     public override void update() {
         base.update();
+        	frameCount++;
         globalCollider = new Collider(new Rect(0, 0, 25, 35).getPoints(),
         false, this, false, false, HitboxFlag.HitAndHurt, Point.zero); //isTrigger false first bool
 
-        if (vel.y >= 10) {
-            changeSprite("mav_x4mrm_fall", false);
+        if (vel.y >= 10 && !hasFallen) {
+            hasFallen = true;
+            changeSprite("mav_x4mrm_fall", true);
         }
-        if (this.grounded && !hasLandedOnce) {
-            hasLandedOnce = true;
+        if (grounded && !hasLanded) {
+            hasLanded = true;
+            hasJumped = false; //jump reset
             vel = Point.zero;
-            changeSprite("mav_x4mrm_land", false);
+            changeSprite("mav_x4mrm_land", true);
+        }
+        if (hasLanded && !hasIdled && isAnimOver()) {
+            hasIdled = true;
+            changeSprite("mav_x4mrm_idle", true);
+        }
+        if (hasIdled && !hasJumped && frameIndex > 0) {
+            if (jumpCounter < 2) {
+                hasJumped = true;
+                jumpCounter++;
+                doSmallJump();
+            } else {
+                //------------------------ Homing&Targeting Section ------------------------//
+                //just visuals, set self destroy (wait time)
+                if (!hasSetWaitingSprite) {
+                    hasSetWaitingSprite = true;
+                    changeSprite("mav_x4mrm_idle", true);
+                    time = 0;
+                    maxTime = TIME_WAITING_FOR_TARGET;
+                }
+                target = Global.level.getClosestTarget(pos, damager.owner.alliance, true, aMaxDist: 400);
+
+                if (target != null) {
+                    if (!hasSetMaxtimeAfterTargeting) {
+                        hasSetMaxtimeAfterTargeting = true;
+                        time = 0;
+                        maxTime = 2.4f;
+                    }
+                    changeSprite("mav_x4mrm_3dash_spin", false);
+                    frameSpeed = 24f;
+                    if (loopCount > 5 && !hasSetDirectionToTarget) {
+                        frameSpeed = 8f;
+                        hasSetDirectionToTarget = true;
+                        var dTo = pos.directionTo(target.getCenterPos()).normalize();
+                        var destAngle = MathF.Atan2(dTo.y, dTo.x) * 180 / MathF.PI;
+                        destAngle = Helpers.to360(destAngle);
+                        vel.x = Helpers.cosd(destAngle) * HOMING_SPEED;
+                        vel.y = Helpers.sind(destAngle) * HOMING_SPEED;
+                    }
+                }
+            }
         }
     }
 
-    public override void onDestroy() {
-        base.onDestroy();
+    private void doSmallJump() {
+        hasFallen = false;
+        hasLanded = false;
+        hasIdled = false;
+
+        changeSprite("mav_x4mrm_jump", true);
+        vel.y = -Physics.JumpSpeed * JUMP_MOD;
+        grounded = false;
+
+    }
+
+    public override List<ShaderWrapper>? getShaders() {
+        var shaders = new List<ShaderWrapper>();
+
+        ShaderWrapper cloneShader = Helpers.cloneShaderSafe("soulBodyPalette");
+        if (cloneShader != null) {
+            int index = (frameCount / 2) % 7;
+            if (index == 0) index++;
+
+            cloneShader.SetUniform("palette", index);
+            cloneShader.SetUniform("paletteTexture", Global.textures["soul_body_palette"]);
+            shaders.Add(cloneShader);
+        }
+
+        if (shaders.Count > 0) {
+            return shaders;
+        } else {
+            return base.getShaders();
+        }
     }
 }
 #endregion

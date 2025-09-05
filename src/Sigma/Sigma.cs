@@ -372,7 +372,7 @@ public class BaseSigma : Character {
 			if (isMaverickIdle && currentWeapon is SigmaMenuWeapon sw &&
 				sw.shootCooldown == 0 && charState is not Die && tagTeamSwapProgress == 0
 			) {
-				tagTeamSwapProgress = 30;
+				tagTeamSwapProgress = 1;
 				tagTeamSwapCase = 0;
 			} else if (currentWeapon is MaverickWeapon mw &&
 				mw.controlMode == MaverickModeId.TagTeam &&
@@ -380,7 +380,7 @@ public class BaseSigma : Character {
 				mw.cooldown == 0 && (isSigmaIdle || isMaverickIdle)
 			) {
 				if (canAffordMaverick(mw)) {
-					tagTeamSwapProgress = 30;
+					tagTeamSwapProgress = 1;
 					tagTeamSwapCase = 1;
 				} else {
 					cantAffordMaverickMessage(mw);
@@ -677,7 +677,7 @@ public class BaseSigma : Character {
 		if (tagTeamSwapProgress > 0) {
 			float healthBarInnerWidth = 30;
 
-			float progress = 1 - (tagTeamSwapProgress / 30f);
+			float progress = 1 - (tagTeamSwapProgress / 1f);
 			float width = progress * healthBarInnerWidth;
 
 			getHealthNameOffsets(out bool shieldDrawn, ref progress);
