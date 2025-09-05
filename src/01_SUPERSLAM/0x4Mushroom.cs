@@ -7,7 +7,7 @@ namespace MMXOnline;
 public class X4Mushroom : Maverick {
     public static Weapon getWeapon() { return new Weapon(WeaponIds.FakeZeroGeneric, 150); }
     private float bodyCreation = 0;
-    private const float BODY_CD = 0.7f;
+    private const float BODY_CD = 0.6f;
 
     // Main creation function.
     public X4Mushroom(
@@ -644,7 +644,7 @@ public class MushroomBodyProj : Projectile {
     private bool hasIdled;
     private bool hasJumped;
     private bool hasSetWaitingSprite;
-    private bool hasSetMaxtimeAfterTargeting;
+    private bool hasLockedTargetOnce;
     private bool hasSetDirectionToTarget;
 
     private int frameCount;
@@ -664,15 +664,14 @@ public class MushroomBodyProj : Projectile {
         projId = (int)ProjIds.GBeetleGravityWell;
         vel = new Point((65 + new Random().Next(-25, 26)) * xDir, -200 + new Random().Next(-30, 31));
         maxTime = 4f;
-        damager.damage = 2;
-        damager.flinch = Global.defFlinch;
+        damager.damage = 1;
         //----------------------------//       
         frameSpeed = 0.8f;
         useGravity = true;
         gravityModifier = 0.65f;
         destroyOnHit = true;
         destroyOnHitWall = false;
-        fadeSprite = "mav_x4mrm_1atk_body_fade";
+        fadeSprite = "mav_x4mrm_1atk_body_fade0";
         fadeOnAutoDestroy = true;
 
         if (rpc) {
@@ -688,10 +687,11 @@ public class MushroomBodyProj : Projectile {
 
     public override void update() {
         base.update();
-        	frameCount++;
+        frameCount++;
         globalCollider = new Collider(new Rect(0, 0, 25, 35).getPoints(),
         false, this, false, false, HitboxFlag.HitAndHurt, Point.zero); //isTrigger false first bool
 
+        //------------------------ Land, Hop twice then homing/destroySelf------------------------//
         if (vel.y >= 10 && !hasFallen) {
             hasFallen = true;
             changeSprite("mav_x4mrm_fall", true);
@@ -707,10 +707,15 @@ public class MushroomBodyProj : Projectile {
             changeSprite("mav_x4mrm_idle", true);
         }
         if (hasIdled && !hasJumped && frameIndex > 0) {
-            if (jumpCounter < 2) {
+            if (jumpCounter < 2) { //hop && reset hop bools
                 hasJumped = true;
                 jumpCounter++;
-                doSmallJump();
+                hasFallen = false;
+                hasLanded = false;
+                hasIdled = false;
+                changeSprite("mav_x4mrm_jump", true);
+                vel.y = -Physics.JumpSpeed * JUMP_MOD;
+                grounded = false;
             } else {
                 //------------------------ Homing&Targeting Section ------------------------//
                 //just visuals, set self destroy (wait time)
@@ -720,17 +725,21 @@ public class MushroomBodyProj : Projectile {
                     time = 0;
                     maxTime = TIME_WAITING_FOR_TARGET;
                 }
+
                 target = Global.level.getClosestTarget(pos, damager.owner.alliance, true, aMaxDist: 400);
 
                 if (target != null) {
-                    if (!hasSetMaxtimeAfterTargeting) {
-                        hasSetMaxtimeAfterTargeting = true;
+                    if (!hasLockedTargetOnce) {
+                        hasLockedTargetOnce = true;
                         time = 0;
                         maxTime = 2.4f;
+                        changeSprite("mav_x4mrm_3dash_spin", true);
+                        frameSpeed = 24f;
                     }
-                    changeSprite("mav_x4mrm_3dash_spin", false);
-                    frameSpeed = 24f;
                     if (loopCount > 5 && !hasSetDirectionToTarget) {
+                        fadeSprite = "mav_x4mrm_1atk_body_fade1";
+                        updateDamager(4, Global.defFlinch);
+
                         frameSpeed = 8f;
                         hasSetDirectionToTarget = true;
                         var dTo = pos.directionTo(target.getCenterPos()).normalize();
@@ -744,21 +753,19 @@ public class MushroomBodyProj : Projectile {
         }
     }
 
-    private void doSmallJump() {
-        hasFallen = false;
-        hasLanded = false;
-        hasIdled = false;
-
-        changeSprite("mav_x4mrm_jump", true);
-        vel.y = -Physics.JumpSpeed * JUMP_MOD;
-        grounded = false;
-
+    public override void onHitWall(CollideData other) {
+        base.onHitWall(other);
+        if (other.isSideWallHit() && frameCount % 2 == 0) {
+            vel.x *= -1;
+        }
+        if (hasSetDirectionToTarget && !other.isGroundHit()) destroySelf();
     }
 
     public override List<ShaderWrapper>? getShaders() {
         var shaders = new List<ShaderWrapper>();
 
         ShaderWrapper cloneShader = Helpers.cloneShaderSafe("soulBodyPalette");
+
         if (cloneShader != null) {
             int index = (frameCount / 2) % 7;
             if (index == 0) index++;
@@ -767,7 +774,6 @@ public class MushroomBodyProj : Projectile {
             cloneShader.SetUniform("paletteTexture", Global.textures["soul_body_palette"]);
             shaders.Add(cloneShader);
         }
-
         if (shaders.Count > 0) {
             return shaders;
         } else {
