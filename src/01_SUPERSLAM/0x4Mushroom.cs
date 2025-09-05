@@ -211,7 +211,7 @@ public class MushroomRun : MaverickState {
         if (maverick.input.isPressed(Control.Jump, maverick.player)) {
             maverick.changeState(new MushroomJump(storedXSpeed, isDoubleJump: (maverick.grounded ? false : true)));
         }
-        if (maverick.input.isHeld(Control.Down, maverick.player)) {
+        if (maverick.input.isPressed(Control.Down, maverick.player)) {
             maverick.changeState(new MushroomSpinDash(storedXSpeed * 1.2f));
         }
     }
@@ -341,7 +341,7 @@ public class MushroomCroutch : MaverickState { //aka spindash start
     private const float MAX_LEVEL = 3;
 
     private readonly float[] levelFrameSpeeds = { 2f, 5f, 8f, 12f };
-    private readonly float[] levelSpeeds = { 200f, 300f, 400f, 550f };
+    private readonly float[] levelSpeeds = { 250f, 350f, 450f, 550f };
 
     private float levelSpeed = 0f;
 
@@ -405,6 +405,7 @@ public class MushroomSpinDash : MaverickState { //Copypasted from Run, but remov
     private bool isHoldingDirection;
     private bool stoppedHoldingJump;
     private bool shouldDeaccMore;
+    private bool oldStateWasRun;
     private int lastXDir;
 
     private const float SPEED_DEACC = 160f; //not holding anything
@@ -419,7 +420,9 @@ public class MushroomSpinDash : MaverickState { //Copypasted from Run, but remov
     public override void onEnter(MaverickState oldState) {
         base.onEnter(oldState);
         minepe = maverick as X4Mushroom ?? throw new NullReferenceException();
-
+        if (oldState is MushroomRun) {
+            oldStateWasRun = true;
+        }
     }
 
     public override void preUpdate() {
@@ -459,7 +462,7 @@ public class MushroomSpinDash : MaverickState { //Copypasted from Run, but remov
             if (storedXSpeed <= 15f) {
                 maverick.changeState(new MIdle());
             }
-            if (storedXSpeed <= (shouldDeaccMore ? 60 : 240)) {
+            if (storedXSpeed <= (shouldDeaccMore ? 60 : 240) && !oldStateWasRun) {
                 if (maverick.input.isHeld(Control.Left, maverick.player) || maverick.input.isHeld(Control.Right, maverick.player)) {
                     maverick.changeState(new MushroomRun(storedXSpeed));
                 }
@@ -479,7 +482,7 @@ public class MushroomSpinDash : MaverickState { //Copypasted from Run, but remov
                     jumpTime = 0;
                 }
         }
-        
+
     }
 }
 #endregion
