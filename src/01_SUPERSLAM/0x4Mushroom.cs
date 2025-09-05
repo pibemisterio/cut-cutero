@@ -6,7 +6,8 @@ namespace MMXOnline;
 
 public class X4Mushroom : Maverick {
     public static Weapon getWeapon() { return new Weapon(WeaponIds.FakeZeroGeneric, 150); }
-
+    private float bodyCreation = 0;
+    private const float BODY_CD = 0.7f;
 
     // Main creation function.
     public X4Mushroom(
@@ -49,6 +50,11 @@ public class X4Mushroom : Maverick {
     public override void update() {
         base.update();
         if (!ownedByLocalPlayer) return;
+        bodyCreation += Global.spf;
+        if (input.isHeld(Control.Shoot, player) && bodyCreation >= BODY_CD) {
+            new MushroomBodyProj(pos, xDir, this, player, player.getNextActorNetId(), true);
+            bodyCreation = 0;
+        }
         if (state is MIdle or MRun or MLand) {
             if (input.isPressed(Control.Jump, player)) {
                 changeState(new MushroomJump(0, isDoubleJump: false));
@@ -70,14 +76,13 @@ public class X4Mushroom : Maverick {
     #endregion
     #region ★ Atk Ctrl ━━━━━
     public override bool attackCtrl() {
-        if (input.isHeld(Control.Shoot, player) && state is MRun) {
-            changeState(new FakeZeroMeleeState());
-            return true;
-        }
-        if (input.isHeld(Control.Shoot, player)) {
-            changeState(new FakeZeroShootState(), false);
-            return true;
-        }
+
+
+
+
+
+
+
         if (input.isPressed(Control.Special1, player)) {
             changeState(new FakeZeroMeleeState());
             return true;
@@ -632,21 +637,27 @@ public class MushrenzanProj : Projectile {
 
 #region ⬤ Mushroom Body ━
 public class MushroomBodyProj : Projectile {
+    private bool hasLandedOnce;
+
     public MushroomBodyProj(
         Point pos, int xDir, Actor owner, Player player, ushort? netId, bool rpc = false
     ) : base(
-        pos, xDir, owner, "empty", netId, player
+        pos, xDir, owner, "mav_x4mrm_1atk_body_start", netId, player
     ) {
         weapon = FakeZero.getWeapon();
         projId = (int)ProjIds.GBeetleGravityWell;
-        damager.damage = 1;
+        damager.damage = 2;
         damager.flinch = Global.defFlinch;
         damager.hitCooldown = 30;
-        vel = new Point(300 * xDir, 0);
-        maxTime = 1.2f;
+        vel = new Point((65 + new Random().Next(-25, 26)) * xDir, -200 + new Random().Next(-30, 31));
+        maxTime = 3.2f;
+        //----------------------------//       
+        useGravity = true;
+        gravityModifier = 0.5f;
         destroyOnHit = true;
         destroyOnHitWall = false;
-        fadeSprite = "mmx_x4btr_lv0_fade";
+
+
 
         if (rpc) {
             rpcCreate(pos, owner, ownerPlayer, netId, xDir);
@@ -661,6 +672,17 @@ public class MushroomBodyProj : Projectile {
 
     public override void update() {
         base.update();
+        globalCollider = new Collider(new Rect(0, 0, 25, 35).getPoints(),
+        false, this, false, false, HitboxFlag.HitAndHurt, Point.zero); //isTrigger false first bool
+
+        if (vel.y >= 10) {
+            changeSprite("mav_x4mrm_fall", false);
+        }
+        if (this.grounded && !hasLandedOnce) {
+            hasLandedOnce = true;
+            vel = Point.zero;
+            changeSprite("mav_x4mrm_land", false);
+        }
     }
 
     public override void onDestroy() {
