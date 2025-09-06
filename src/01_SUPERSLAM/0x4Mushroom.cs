@@ -70,27 +70,21 @@ public class X4Mushroom : Maverick {
                 xDir = 1;
                 changeState(new MushroomRun(0));
             }
-
+        }
+        if (state is MushroomJump or MushroomSpinDash) {
+            if (input.isHeld(Control.Down, player) && input.isPressed(Control.Dash, player)) {
+                changeState(new MushroomHeadbutt());
+            }
         }
     }
     #endregion
     #region ★ Atk Ctrl ━━━━━
     public override bool attackCtrl() {
 
-
-
-
-
-
-
         if (input.isPressed(Control.Special1, player)) {
             changeState(new FakeZeroMeleeState());
             return true;
         }
-
-
-
-
         return false;
     }
     #endregion
@@ -521,24 +515,37 @@ public class MushroomFlinch : MaverickState {
 #endregion
 
 #region ■ Headbutt ━━━━
-public class MusrhoomHeadbutt : MaverickState {
+public class MushroomHeadbutt : MaverickState {
     public X4Mushroom minepe = null!;
-    //bool startedGrounded;
+    bool hasLanded;
 
-    public MusrhoomHeadbutt() : base("1atk") {
-        //public MavState(bool startedGrounded) : base(startedGrounded ? "1atk" : "1atk_air") {
-        //this.startedGrounded = startedGrounded;
+    public MushroomHeadbutt() : base("3dash_headbutt") {
+
     }
 
     public override void onEnter(MaverickState oldState) {
         base.onEnter(oldState);
         minepe = maverick as X4Mushroom ?? throw new NullReferenceException();
         maverick.stopMoving();
+        maverick.gravityModifier = 0;
+        maverick.frameSpeed = 0;
     }
 
     public override void update() {
         base.update();
+        maverick.gravityModifier += Global.spf * 3f;
+        if (maverick.grounded && !hasLanded) {
+            maverick.shakeCamera();
+            hasLanded = true;
+            maverick.frameSpeed = 1;
+            maverick.frameIndex = 1;
 
+            new MushroomPoisonProj(maverick.pos.addxy(-10, -4), -1, 1, maverick, player, player.getNextActorNetId(), true);
+            new MushroomPoisonProj(maverick.pos.addxy(-5, 0), -1, 0, maverick, player, player.getNextActorNetId(), true);
+            new MushroomPoisonProj(maverick.pos.addxy(5, 0), 1, 0, maverick, player, player.getNextActorNetId(), true);
+            new MushroomPoisonProj(maverick.pos.addxy(10, -4), 1, 1, maverick, player, player.getNextActorNetId(), true);
+
+        }
         if (maverick.isAnimOver()) {
             maverick.changeState(new MIdle());
         }
@@ -546,6 +553,7 @@ public class MusrhoomHeadbutt : MaverickState {
 
     public override void onExit(MaverickState newState) {
         base.onExit(newState);
+        maverick.gravityModifier = 0.8f;
     }
 }
 #endregion
@@ -662,7 +670,7 @@ public class MushroomBodyProj : Projectile {
     ) {
         weapon = FakeZero.getWeapon();
         projId = (int)ProjIds.GBeetleGravityWell;
-        vel = new Point((65 + new Random().Next(-25, 26)) * xDir, -200 + new Random().Next(-30, 31));
+        vel = new Point((65 + new Random().Next(-25, 26)) * xDir, -240 + new Random().Next(-30, 31));
         maxTime = 4f;
         damager.damage = 1;
         //----------------------------//       
@@ -673,6 +681,8 @@ public class MushroomBodyProj : Projectile {
         destroyOnHitWall = false;
         fadeSprite = "mav_x4mrm_1atk_body_fade0";
         fadeOnAutoDestroy = true;
+        xScale = 0.6f;
+        yScale = 0.6f;
 
         if (rpc) {
             rpcCreate(pos, owner, ownerPlayer, netId, xDir);
@@ -831,36 +841,49 @@ public class TypedProj : Projectile {
 }
 #endregion
 #region ⬤ Poison Cloud ━━━
-public class NeutralProj : Projectile {
-    public NeutralProj(
-        Point pos, int xDir, Actor owner, Player player, ushort? netId, bool rpc = false
+public class MushroomPoisonProj : Projectile {
+    public MushroomPoisonProj(
+        Point pos, int xDir, int type, Actor owner, Player player, ushort? netId, bool rpc = false
     ) : base(
-        pos, xDir, owner, "empty", netId, player
+        pos, xDir, owner, "mav_x4mrm_3dash_poison_proj", netId, player
     ) {
         weapon = FakeZero.getWeapon();
         projId = (int)ProjIds.GBeetleGravityWell;
+        vel = Point.zero;
         damager.damage = 1;
         damager.flinch = Global.defFlinch;
         damager.hitCooldown = 30;
-        vel = new Point(300 * xDir, 0);
-        maxTime = 1.2f;
-        destroyOnHit = true;
+        //----------------------------//       
+        useGravity = true;
+        gravityModifier = 0.18f;
+        maxTime = 2f;
+        destroyOnHit = false;
         destroyOnHitWall = false;
-        fadeSprite = "mmx_x4btr_lv0_fade";
-
+        switch (type) {
+            case 0:
+                vel = new Point(40 * xDir, -140);
+                break;
+            case 1:
+                vel = new Point(80 * xDir, -120);
+                break;
+        }
         if (rpc) {
-            rpcCreate(pos, owner, ownerPlayer, netId, xDir);
+            rpcCreate(pos, owner, ownerPlayer, netId, xDir, (byte)type);
         }
     }
 
     public static Projectile rpcInvoke(ProjParameters args) {
-        return new NeutralProj(
-            args.pos, args.xDir, args.owner, args.player, args.netId
+        return new MushroomPoisonProj(
+            args.pos, args.xDir, args.extraData[0], args.owner, args.player, args.netId
         );
     }
 
     public override void update() {
         base.update();
+        if (time > 0.24f) {
+            vel.x = Helpers.lerp(vel.x, -50 * xDir, Global.spf * 1.5f);
+        }
+        if (isAnimOver()) destroySelf();
     }
 
     public override void onDestroy() {
