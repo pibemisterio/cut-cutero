@@ -9,6 +9,7 @@ public class X4Mushroom : Maverick {
     private float bodyCreation = 0;
     private const float BODY_CD = 0.6f;
 
+
     // Main creation function.
     public X4Mushroom(
         Player player, Point pos, Point destPos, int xDir,
@@ -34,6 +35,7 @@ public class X4Mushroom : Maverick {
         if (sendRpc) {
             createActorRpc(player.id);
         }
+
         gravityModifier = 0.8f;
         usesAmmo = true;
         canHealAmmo = true;
@@ -51,8 +53,8 @@ public class X4Mushroom : Maverick {
         base.update();
         if (!ownedByLocalPlayer) return;
         bodyCreation += Global.spf;
-        if (input.isHeld(Control.Shoot, player) && bodyCreation >= BODY_CD) {
-            new MushroomBodyProj(pos, xDir, this, player, player.getNextActorNetId(), true);
+        if (input.isHeld(Control.Shoot, player) && bodyCreation >= BODY_CD && state is not MushroomWall) {
+            new MushroomBodyProj(pos, xDir, isFromWall: false, this, player, player.getNextActorNetId(), true);
             bodyCreation = 0;
         }
         if (state is MIdle or MRun or MLand) {
@@ -77,6 +79,7 @@ public class X4Mushroom : Maverick {
             }
         }
     }
+
     #endregion
     #region ★ Atk Ctrl ━━━━━
     public override bool attackCtrl() {
@@ -227,6 +230,7 @@ public class MushroomJump : MaverickState {
 
     private bool stoppedHoldingJump;
     private bool isHoldingDirection;
+    private bool hasEndedDoubleJumpAnim; //minor thing
     private int lastXDir;
 
     private const float SPEED_ACC = 180f;   //holding fowards
@@ -285,7 +289,7 @@ public class MushroomJump : MaverickState {
         //---------------------------Jump Controller---------------------------
         //start falling when not holding Control.Jump
         if (stateTime >= 0.05f) {
-            if (!player.input.isHeld(Control.Jump, player) || stateTime >= 0.4f)
+            if (!player.input.isHeld(Control.Jump, player) || stateTime >= 0.4f) {
                 if (!stoppedHoldingJump) {
                     stoppedHoldingJump = true;
                     maverick.vel.y *= 0.4f; //smoother
@@ -293,8 +297,13 @@ public class MushroomJump : MaverickState {
                         maverick.changeSpriteFromName("fall", true);
                     }
                 }
+            }
+            if (isDoubleJump && maverick.isAnimOver() && !hasEndedDoubleJumpAnim) {
+                hasEndedDoubleJumpAnim = true;
+                maverick.changeSpriteFromName("fall", true);
+                maverick.frameIndex = 1;
+            }
         }
-
         //double jump
         if (stateTime >= 0.02f && maverick.input.isPressed(Control.Jump, maverick.player) && !isDoubleJump) {
             // hardcoded moving to the left then jumping to the rigth
@@ -323,8 +332,62 @@ public class MushroomJump : MaverickState {
                 // if not jump normally.... papu wtF santos skibidis hardcoderos
                 maverick.changeState(new MushroomRun(storedXSpeed));
             }
-
         }
+        //change to wall
+        var hitWall = Global.level.checkTerrainCollisionOnce(maverick, 1 * maverick.xDir, -2);
+        if (hitWall?.isSideWallHit() == true &&
+            (maverick.input.isHeld(Control.Left, maverick.player) || maverick.input.isHeld(Control.Right, maverick.player))) {
+            maverick.xDir *= -1;
+            maverick.changeState(new MushroomWall());
+        }
+    }
+}
+#endregion
+
+#region ■ Wall ━━━━━━━
+public class MushroomWall : MaverickState {
+    public X4Mushroom minepe = null!;
+    private bool isAttacking;
+    private bool hasFiredLoop;
+
+    public MushroomWall() : base("wall") {
+
+    }
+
+    public override void onEnter(MaverickState oldState) {
+        base.onEnter(oldState);
+        minepe = maverick as X4Mushroom ?? throw new NullReferenceException();
+        maverick.stopMoving();
+        maverick.useGravity = false;
+    }
+
+    public override void update() {
+        base.update();
+        //is not attacking
+        if (maverick.input.isPressed(Control.Shoot, maverick.player) && !isAttacking) {
+            isAttacking = true;
+            maverick.changeSpriteFromName("wall_attack", true);
+        }
+        if (isAttacking && !hasFiredLoop && maverick.frameIndex == 3) {
+            hasFiredLoop = true;
+            new MushroomBodyProj(maverick.pos.addxy(28 * maverick.xDir, 2), maverick.xDir, isFromWall: true, maverick, player, player.getNextActorNetId(), true);
+        }
+        if (isAttacking && maverick.frameIndex == 4) {
+            hasFiredLoop = false;
+        }
+        if (!maverick.input.isHeld(Control.Left, maverick.player) && maverick.xDir == 1 || !maverick.input.isHeld(Control.Right, maverick.player) && maverick.xDir == -1) {
+            maverick.changeState(new MushroomJump(0, false));
+        }
+        if (!maverick.input.isHeld(Control.Shoot, maverick.player) && isAttacking) {
+            isAttacking = false;
+            maverick.changeSpriteFromName("wall", true);
+            maverick.frameIndex = 2;
+        }
+    }
+
+    public override void onExit(MaverickState newState) {
+        base.onExit(newState);
+        maverick.useGravity = true;
     }
 }
 #endregion
@@ -332,6 +395,7 @@ public class MushroomJump : MaverickState {
 #region ■ Croutch ━━━━━
 public class MushroomCroutch : MaverickState { //aka spindash start
     public X4Mushroom minepe = null!;
+    MushroomSpinProj? proj;
     private bool startedSpindashing;
     private float revLevel = 0;
     private float timeSinceLastRev = 1f;
@@ -370,6 +434,7 @@ public class MushroomCroutch : MaverickState { //aka spindash start
             startedSpindashing = true;
             revLevel = 0;
             maverick.changeSpriteFromName("3dash_spin", true);
+            proj = new MushroomSpinProj(maverick.pos, maverick.xDir, maverick, player, player.getNextActorNetId(), true);
         }
 
         //------------------------------Factor Handling------------------------
@@ -392,6 +457,10 @@ public class MushroomCroutch : MaverickState { //aka spindash start
             maverick.xDir, player.getNextActorNetId(), true, sendRpc: true);
         }
     }
+    public override void onExit(MaverickState newState) {
+        base.onExit(newState);
+        proj?.destroySelf();
+    }
 }
 #endregion
 
@@ -399,7 +468,9 @@ public class MushroomCroutch : MaverickState { //aka spindash start
 #region ■ Spin Dash ━━━━
 public class MushroomSpinDash : MaverickState { //Copypasted from Run, but removing a lot of
     public X4Mushroom minepe = null!;           //input holding mechanics not present in sanic
+    MushroomSpinProj? proj;
     private float storedXSpeed;
+    private float jumpTime;
 
     private bool isHoldingDirection;
     private bool stoppedHoldingJump;
@@ -419,6 +490,7 @@ public class MushroomSpinDash : MaverickState { //Copypasted from Run, but remov
     public override void onEnter(MaverickState oldState) {
         base.onEnter(oldState);
         minepe = maverick as X4Mushroom ?? throw new NullReferenceException();
+        proj = new MushroomSpinProj(maverick.pos, maverick.xDir, maverick, player, player.getNextActorNetId(), true);
         if (oldState is MushroomRun) {
             oldStateWasRun = true;
         }
@@ -427,10 +499,12 @@ public class MushroomSpinDash : MaverickState { //Copypasted from Run, but remov
     public override void preUpdate() {
         base.preUpdate();
         lastXDir = maverick.xDir;
+
     }
-    float jumpTime = 0;
+
     public override void update() {
         base.update();
+
         //mimic stateTime for jump handling
         if (!maverick.grounded) {
             jumpTime += Global.spf;
@@ -481,7 +555,10 @@ public class MushroomSpinDash : MaverickState { //Copypasted from Run, but remov
                     jumpTime = 0;
                 }
         }
-
+    }
+    public override void onExit(MaverickState newState) {
+        base.onExit(newState);
+        proj?.destroySelf();
     }
 }
 #endregion
@@ -520,7 +597,6 @@ public class MushroomHeadbutt : MaverickState {
     bool hasLanded;
 
     public MushroomHeadbutt() : base("3dash_headbutt") {
-
     }
 
     public override void onEnter(MaverickState oldState) {
@@ -622,7 +698,7 @@ public class MushrenzanProj : Projectile {
     }
 
     public static Projectile rpcInvoke(ProjParameters args) {
-        return new MushroomBodyProj(
+        return new MushrenzanProj(
             args.pos, args.xDir, args.owner, args.player, args.netId
         );
     }
@@ -632,11 +708,9 @@ public class MushrenzanProj : Projectile {
         if (isAnimOver()) destroySelf();
     }
     public override void postUpdate() {
-        base.postUpdate();
-        if (owner?.character != null) {
-            changePos(owner.character.pos);
-        }
+        base.postUpdate(); this?.changePos(minepe.pos);
     }
+
     public override void onDestroy() {
         base.onDestroy();
     }
@@ -646,6 +720,7 @@ public class MushrenzanProj : Projectile {
 #region ⬤ Mushroom Body ━
 public class MushroomBodyProj : Projectile {
     public Actor? target;
+    bool isFromWall;
 
     private bool hasFallen;
     private bool hasLanded;
@@ -664,25 +739,26 @@ public class MushroomBodyProj : Projectile {
     private const float TIME_WAITING_FOR_TARGET = 1.2f;
 
     public MushroomBodyProj(
-        Point pos, int xDir, Actor owner, Player player, ushort? netId, bool rpc = false
+        Point pos, int xDir, bool isFromWall, Actor owner, Player player, ushort? netId, bool rpc = false
     ) : base(
         pos, xDir, owner, "mav_x4mrm_1atk_body_start", netId, player
     ) {
+        this.isFromWall = isFromWall;
         weapon = FakeZero.getWeapon();
         projId = (int)ProjIds.GBeetleGravityWell;
-        vel = new Point((65 + new Random().Next(-25, 26)) * xDir, -240 + new Random().Next(-30, 31));
+        vel = isFromWall ? vel = Point.zero : new Point((65 + new Random().Next(-25, 26)) * xDir, -240 + new Random().Next(-30, 31));
         maxTime = 4f;
         damager.damage = 1;
         //----------------------------//       
         frameSpeed = 0.8f;
-        useGravity = true;
+        useGravity = isFromWall ? false : true;
         gravityModifier = 0.65f;
         destroyOnHit = true;
         destroyOnHitWall = false;
         fadeSprite = "mav_x4mrm_1atk_body_fade0";
         fadeOnAutoDestroy = true;
-        xScale = 0.6f;
-        yScale = 0.6f;
+        xScale = isFromWall ? 1f : 0.6f;
+        yScale = isFromWall ? 1f : 0.6f;
 
         if (rpc) {
             rpcCreate(pos, owner, ownerPlayer, netId, xDir);
@@ -691,7 +767,7 @@ public class MushroomBodyProj : Projectile {
 
     public static Projectile rpcInvoke(ProjParameters args) {
         return new MushroomBodyProj(
-            args.pos, args.xDir, args.owner, args.player, args.netId
+            args.pos, args.xDir, true, args.owner, args.player, args.netId
         );
     }
 
@@ -700,7 +776,9 @@ public class MushroomBodyProj : Projectile {
         frameCount++;
         globalCollider = new Collider(new Rect(0, 0, 25, 35).getPoints(),
         false, this, false, false, HitboxFlag.HitAndHurt, Point.zero); //isTrigger false first bool
-
+        if (isFromWall && isAnimOver()) {
+          useGravity = true; //fall when startsprite ends
+        }
         //------------------------ Land, Hop twice then homing/destroySelf------------------------//
         if (vel.y >= 10 && !hasFallen) {
             hasFallen = true;
@@ -838,6 +916,48 @@ public class TypedProj : Projectile {
     public override void onDestroy() {
         base.onDestroy();
     }
+}
+#endregion
+#region ⬤ Spin Proj ━━━
+public class MushroomSpinProj : Projectile {
+    public X4Mushroom minepe = null!;
+    public MushroomSpinProj(
+        Point pos, int xDir, Actor owner, Player player, ushort? netId, bool rpc = false
+    ) : base(
+        pos, xDir, owner, "mav_x4mrm_3dash_spin_proj", netId, player
+    ) {
+        minepe = owner as X4Mushroom ?? throw new NullReferenceException();
+        weapon = FakeZero.getWeapon();
+        projId = (int)ProjIds.GBeetleGravityWell;
+        damager.damage = 1;
+        damager.flinch = Global.defFlinch;
+        damager.hitCooldown = 30;
+        vel = Point.zero;
+        maxTime = 12f;
+        destroyOnHit = false;
+        destroyOnHitWall = false;
+
+        if (rpc) {
+            rpcCreate(pos, owner, ownerPlayer, netId, xDir);
+        }
+    }
+
+    public static Projectile rpcInvoke(ProjParameters args) {
+        return new MushroomSpinProj(
+            args.pos, args.xDir, args.owner, args.player, args.netId
+        );
+    }
+
+    public override void update() {
+        base.update();
+        if (minepe != null) {
+            this.frameSpeed = minepe.frameSpeed;
+        }
+    }
+    public override void postUpdate() {
+        base.postUpdate(); this?.changePos(minepe.pos);
+    }
+
 }
 #endregion
 #region ⬤ Poison Cloud ━━━
