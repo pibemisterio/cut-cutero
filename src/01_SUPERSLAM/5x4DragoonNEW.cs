@@ -541,7 +541,6 @@ public class DragoonDivekick : MaverickState {
     public override void onExit(MaverickState newState) {
         base.onExit(newState);
         proj?.destroySelf();
-
     }
 }
 #endregion

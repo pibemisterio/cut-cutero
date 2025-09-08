@@ -87,7 +87,6 @@ public class X4Spider: Maverick {
         return false;
     }
 
-
     public override float getRunSpeed() {
         float retSpeed = baseSpeed + accSpeed;
         if (retSpeed > Physics.WalkSpeed) {

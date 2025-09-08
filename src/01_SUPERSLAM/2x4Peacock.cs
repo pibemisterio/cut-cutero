@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using SFML.Graphics;
+
 namespace MMXOnline;
 
 #region ▄▄★ PEACOCK ★▄▄ 
@@ -54,13 +56,8 @@ public class X4Peacock : Maverick {
         if (cursor != null && cursor.destroyed) {
             cursor = null;
         }
-    }
-    #endregion
-
-    #region ★ Atk Ctrl ━━━━━
-    public override bool attackCtrl() {
-        if (input.isPressed(Control.Jump, player)) {
-            if (state is MJump || state is MFall) {
+        if (state is MIdle or MRun or MLand or MJump or MFall) {
+            if (input.isPressed(Control.Jump, player)) {
                 changeState(new PeacockHover());
             }
         }
@@ -68,46 +65,44 @@ public class X4Peacock : Maverick {
             if (cursor != null) {
                 if (cursor.targetLocked != null) {
                     changeState(new PeacockFireFeather(cursor.targetLocked, fromLoop: false));
-                    return false; //prevent canceling own feather state with feather state
                 }
             } else {
                 changeState(new PeacockFireCursor(startedGrounded: this.grounded));
             }
-
         }
         if (input.isPressed(Control.Special1, player)) {
-
             if (cursor != null) {
                 if (cursor.targetLocked != null) {
                     changeState(new PeacockRaku(cursor.targetLocked));
-                    return false; //prevent canceling own feather state with feather state
                 }
             } else {
                 changeState(new PeacockFireCursor(startedGrounded: this.grounded));
             }
-            return true;
-
         }
         if (input.isPressed(Control.Dash, player)) {
             if (cursor != null) {
                 if (cursor.targetLocked != null) {
                     changeState(new PeacockTailJump(cursor.targetLocked));
-                    return true;
                 }
             } else {
                 changeState(new PeacockFireCursor(startedGrounded: this.grounded));
             }
-
         }
-        if (grounded) {
-            if (input.isHeld(Control.Down, player) && state is not FakeZeroGuardState) {
-                changeState(new FakeZeroGuardState());
-                return true;
+        if (input.isPressed(Control.Special2, player)) {
+            if (cursor != null) {
+                if (cursor.targetLocked != null) {
+                    // changeState(new PeacockGiga(cursor.targetLocked));
+                }
+            } else {
+                changeState(new PeacockFireCursor(startedGrounded: this.grounded));
             }
         }
-        return false;
     }
     #endregion
+
+
+
+
 
     public override float getRunSpeed() {
 
@@ -344,7 +339,7 @@ public class PeacockFireFeather : MaverickState {
     private void fireFeather() {
         Point? shootPos = maverick.getFirstPOIOrDefault();
         if (shootPos != null) {
-            new HomingFeather(
+            new FinalWeaponLockProj(
                 shootPos.Value, maverick.xDir, targetFromLock,
                 picapau, player,
                 player.getNextActorNetId(), rpc: true
@@ -397,7 +392,7 @@ public class PeacockRaku : MaverickState {
         if (maverick.frameIndex >= 17 && !hasFired) {
             hasFired = true;
             new PeacockRakuProj(maverick.pos, maverick.xDir, maverick, player, player.getNextActorNetId(), true);
-            new Anim(maverick.pos.addxy(0,5), "mav_x4pck_2spc_raku_fx", 1, null, true) {
+            new Anim(maverick.pos.addxy(0, 5), "mav_x4pck_2spc_raku_fx", 1, null, true) {
                 yScale = 0.5f,
                 zIndex = picapau.zIndex - 30
             };
@@ -607,6 +602,7 @@ public class HomingFeather : Projectile {
     ) : base(
         pos, xDir, owner, "mav_x4pck_1atk_feather_proj", netId, player
     ) {
+        this.targetFromLock = targetFromLock;
         weapon = BlastHornet.getWeapon();
         damager.damage = 0.1f;
         // damager.flinch = Global.defFlinch;
@@ -615,7 +611,6 @@ public class HomingFeather : Projectile {
         projId = (int)ProjIds.BHornetHomingBee;
         destroyOnHit = true;
         shouldShieldBlock = true;
-        this.targetFromLock = targetFromLock;
         xScale = xDir == -1 ? -1 : 1;
         this.angle = this.xDir == -1 ? 180 : 0;
         new Anim(pos, "mav_x4pck_1atk_feather_muzzle", xDir, null, true);
@@ -900,4 +895,191 @@ public class TailBladeProj : Projectile {
     }
 }
 #endregion
+#region ⬤ Giga Lock ━━━━
+public class FinalWeaponLockProj : Projectile {
+    public Actor? targetFromLock;
+
+    private int frameCount;
+    private float angle = 0;
+    float lineHeight = 190f;
+    private float initialRadius = 60f;
+
+    public FinalWeaponLockProj(
+        Point pos, int xDir, Actor? targetFromLock, Actor owner, Player player, ushort? netId, bool rpc = false
+    ) : base(
+        pos, xDir, owner, "empty", netId, player
+    ) {
+        this.targetFromLock = targetFromLock;
+        weapon = BlastHornet.getWeapon();
+        projId = (int)ProjIds.BubbleSplash;
+        damager.damage = 1;
+        damager.flinch = Global.defFlinch;
+        damager.hitCooldown = 30;
+        vel = Point.zero;
+        maxTime = 2f;
+        destroyOnHit = true;
+        destroyOnHitWall = false;
+
+        if (rpc) {
+            rpcCreate(pos, owner, ownerPlayer, netId, xDir);
+        }
+    }
+
+    public static Projectile rpcInvoke(ProjParameters args) {
+        return new FinalWeaponLockProj(
+            args.pos, args.xDir, null, args.owner, args.player, args.netId
+        );
+    }
+
+    public override void update() {
+        base.update();
+        frameCount++;
+    }
+    public override void postUpdate() {
+        base.postUpdate();
+        if (!ownedByLocalPlayer) return;
+
+        if (targetFromLock != null) {
+            if (time <= 1.5f) {
+                changePos(getTargetPos(targetFromLock));
+                aiMethodiDontFuckingIMGonnaEatThisButImHiglyOffendedByIt(); // (draw the 4 converging lines)
+            } else {
+                if (frameCount % 3 == 0) {
+                    float convergedX = pos.x;
+                    float y1 = pos.y - (lineHeight / 2);
+                    float y2 = pos.y + (lineHeight / 2);
+                    DrawWrappers.DrawLine(convergedX, y1 - 80, convergedX, y2 - 80, Color.Red, 3f, ZIndex.HUD, true);
+                }
+            }
+        }
+    }
+    private void aiMethodiDontFuckingIMGonnaEatThisButImHiglyOffendedByIt() {
+        angle += Global.spf * 200f;
+        if (angle >= 360) {
+            angle = 0;
+        }
+        // Calculate the current radius. It will decrease as the projectile's time approaches its maxTime.
+        float currentRadius = initialRadius * (1.5f - time) / 1.5f;
+
+        // The sign of verticalRadius controls the perspective. Positive makes the front lines curve outwards.
+        float verticalRadius = 12f;
+
+        for (int i = 0; i < 4; i++) {
+            // Calculate the angle for each of the four lines, spaced 90 degrees apart.
+            float lineAngle = angle + (i * 90);
+            // Convert the angle to radians for trigonometric functions.
+            float angleInRadians = lineAngle * (float)Math.PI / 180f;
+
+            // Calculate the X position of the line on the circle.
+            float currentX = pos.x + currentRadius * (float)Math.Cos(angleInRadians);
+
+            // Adjust the Y values to create a cylinder shape
+            float y1 = pos.y - (lineHeight / 2) + verticalRadius * (float)Math.Sin(angleInRadians);
+            float y2 = pos.y + (lineHeight / 2) - verticalRadius * (float)Math.Sin(angleInRadians);
+
+            DrawWrappers.DrawLine(currentX, y1 - 80, currentX, y2 - 80, Color.Red, 1f, ZIndex.HUD, true);
+        }
+    }
+
+
+    public Point getTargetPos([NotNull] Actor targetLocked) {
+        if (targetLocked is Character chr) {
+            return chr.getParasitePos();
+        } else {
+            return targetLocked.getCenterPos();
+        }
+    }
+    public override void onDestroy() {
+        base.onDestroy();
+        new FinalWeaponPieceProj(pos.addxy(0, -0), xDir, 0, this, damager.owner, Global.level.mainPlayer.getNextActorNetId(), rpc: true);
+    }
+}
 #endregion
+
+#region ⬤ Typed ━━━━━━
+public class FinalWeaponPieceProj : Projectile {
+    public int type;
+    public FinalWeaponPieceProj(
+        Point pos, int xDir, int type, Actor owner, Player player, ushort? netId, bool rpc = false
+    ) : base(
+        pos, xDir, owner, "empty", netId, player
+    ) {
+        this.type = type;
+        // weapon = NewBuster.netWeapon;
+        // projId = (int)ProjIds.BusterLv0Proj;
+        damager.damage = 1;
+        damager.flinch = Global.defFlinch;
+        damager.hitCooldown = 30;
+        vel = Point.zero;
+        maxTime = 1.2f;
+        destroyOnHit = false;
+        destroyOnHitWall = false;
+        fadeSprite = "mav_x4pck_4giga_piece_fade";
+        fadeOnAutoDestroy = true;
+
+        switch (type) {
+            case 0: //head
+                changeSprite("mav_x4pck_4giga_piece", false);
+                break;
+            case 1: //piece
+                changeSprite("mav_x4pck_4giga_piece", false);
+                break;
+        }
+
+
+        if (rpc) {
+            rpcCreate(pos, owner, ownerPlayer, netId, xDir, (byte)type);
+        }
+    }
+
+    public static Projectile rpcInvoke(ProjParameters args) {
+        return new FinalWeaponPieceProj(
+            args.pos, args.xDir, args.extraData[0], args.owner, args.player, args.netId
+        );
+    }
+    // Assuming a method like this is called by your engine after the object is fully ready.
+    public override void onStart() {
+        base.onStart(); // Call the base method if it exists.
+
+        if (type == 0) {
+            for (int i = 0; i < 5; i++) {
+                // The position is relative to the head piece's starting position 'pos'.
+                Point piecePos = new Point(pos.x, pos.y - 100 - (i * 100));
+                // Assuming 'rpc' is meant to be passed along for network synchronization.
+                new FinalWeaponPieceProj(piecePos, xDir, 1, this, damager.owner, Global.level.mainPlayer.getNextActorNetId(), rpc: true);
+            }
+        }
+    }
+
+    public override void update() {
+        base.update();
+    }
+
+    public override void onDestroy() {
+        base.onDestroy();
+    }
+}
+#endregion
+#endregion
+
+/*
+tomorrow
+- raycast on point, start creating all GigaLock from ground 
+- handle edgecase when there is no ground
+- sprite head shape
+ 
+-
+-
+
+-piece type0
+-piece creates pillar type1
+
+- type0 parts "mav_x4pck_1atk_feather_explo_proj"
+
+
+
+
+
+
+
+*/

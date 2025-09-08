@@ -218,16 +218,18 @@ public class NeutralProj : Projectile {
     ) : base(
         pos, xDir, owner, "empty", netId, player
     ) {
-        weapon = NewBuster.netWeapon;
-        projId = (int)ProjIds.BusterLv0Proj;
+       // weapon = NewBuster.netWeapon;
+       // projId = (int)ProjIds.BusterLv0Proj;
+        vel = new Point(300 * xDir, 0);
+        maxTime = 1.2f;
         damager.damage = 1;
         damager.flinch = Global.defFlinch;
         damager.hitCooldown = 30;
-        vel = new Point(300 * xDir, 0);
-        maxTime = 1.2f;
+        //----------------------------//    
         destroyOnHit = true;
         destroyOnHitWall = false;
         fadeSprite = "mmx_x4btr_lv0_fade";
+        fadeOnAutoDestroy = true;
         
         if (rpc) {
             rpcCreate(pos, owner, ownerPlayer, netId, xDir);
@@ -260,17 +262,19 @@ public class TypedProj : Projectile {
     ) : base(
         pos, xDir, owner, "empty", netId, player
     ) {
-        //this.type = type;
-        weapon = NewBuster.netWeapon;
-        projId = (int)ProjIds.BusterLv0Proj;
+        //weapon = NewBuster.netWeapon;
+        //projId = (int)ProjIds.BusterLv0Proj;
+        vel = new Point(300 * xDir, 0);
+        maxTime = 1.2f;
         damager.damage = 1;
         damager.flinch = Global.defFlinch;
         damager.hitCooldown = 30;
-        vel = new Point(300 * xDir, 0);
-        maxTime = 1.2f;
+        //----------------------------//    
+        //this.type = type;
         destroyOnHit = true;
         destroyOnHitWall = false;
         fadeSprite = "mmx_x4btr_lv0_fade";
+        fadeOnAutoDestroy = true;
 
         switch (type) {
             case 0:
@@ -311,17 +315,19 @@ public class AngledProj : Projectile {
     ) {
         weapon = NewBuster.netWeapon;
         projId = (int)ProjIds.BusterLv0Proj;
-        damager.damage = 1;
-        damager.flinch = Global.defFlinch;
-        damager.hitCooldown = 30;
-        byteAngle = byteAngle % 256;
-        this.byteAngle = byteAngle;
         vel.x = 400 * Helpers.cosb(byteAngle);
         vel.y = 400 * Helpers.sinb(byteAngle);
         maxTime = 1.2f;
+        damager.damage = 1;
+        damager.flinch = Global.defFlinch;
+        damager.hitCooldown = 30;
+        //----------------------------//    
+        byteAngle = byteAngle % 256;
+        this.byteAngle = byteAngle;
         destroyOnHit = true;
         destroyOnHitWall = false;
         fadeSprite = "mmx_x4btr_lv0_fade";
+        fadeOnAutoDestroy = true;
         
         if (rpc) {
             rpcCreateByteAngle(pos, owner, ownerPlayer, netId, byteAngle);
@@ -358,17 +364,19 @@ public class TypeAngledProj : Projectile {
         this.type = type;
         weapon = NewBuster.netWeapon;
         projId = (int)ProjIds.BusterLv0Proj;
-        damager.damage = 1;
-        damager.flinch = Global.defFlinch;
-        damager.hitCooldown = 30;
-        byteAngle = byteAngle % 256;
-        this.byteAngle = byteAngle;
         vel.x = 400 * Helpers.cosb(byteAngle);
         vel.y = 400 * Helpers.sinb(byteAngle);
         maxTime = 1.2f;
+        damager.damage = 1;
+        damager.flinch = Global.defFlinch;
+        damager.hitCooldown = 30;
+        //----------------------------//    
+        this.byteAngle = byteAngle;
+        byteAngle = byteAngle % 256;
         destroyOnHit = true;
         destroyOnHitWall = false;
         fadeSprite = "mmx_x4btr_lv0_fade";
+        fadeOnAutoDestroy = true;
 
         switch (type) {
             case 0:

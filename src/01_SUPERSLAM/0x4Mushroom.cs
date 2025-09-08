@@ -378,8 +378,9 @@ public class MushroomWall : MaverickState {
         if (!maverick.input.isHeld(Control.Left, maverick.player) && maverick.xDir == 1 || !maverick.input.isHeld(Control.Right, maverick.player) && maverick.xDir == -1) {
             maverick.changeState(new MushroomJump(0, false));
         }
-        if (!maverick.input.isHeld(Control.Shoot, maverick.player) && isAttacking) {
+        if (!maverick.input.isHeld(Control.Shoot, maverick.player) && maverick.frameIndex == 4 && isAttacking) {
             isAttacking = false;
+            hasFiredLoop = false;
             maverick.changeSpriteFromName("wall", true);
             maverick.frameIndex = 2;
         }
@@ -777,7 +778,7 @@ public class MushroomBodyProj : Projectile {
         globalCollider = new Collider(new Rect(0, 0, 25, 35).getPoints(),
         false, this, false, false, HitboxFlag.HitAndHurt, Point.zero); //isTrigger false first bool
         if (isFromWall && isAnimOver()) {
-          useGravity = true; //fall when startsprite ends
+            useGravity = true; //fall when startsprite ends
         }
         //------------------------ Land, Hop twice then homing/destroySelf------------------------//
         if (vel.y >= 10 && !hasFallen) {
