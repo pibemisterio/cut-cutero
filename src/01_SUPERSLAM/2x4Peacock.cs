@@ -91,12 +91,13 @@ public class X4Peacock : Maverick {
         if (input.isPressed(Control.Special2, player)) {
             if (cursor != null) {
                 if (cursor.targetLocked != null) {
-                    // changeState(new PeacockGiga(cursor.targetLocked));
+                    changeState(new PeacockFireGiga(cursor.targetLocked));
                 }
             } else {
                 changeState(new PeacockFireCursor(startedGrounded: this.grounded));
             }
         }
+        
     }
     #endregion
 
@@ -287,7 +288,6 @@ public class PeacockFireFeather : MaverickState {
     bool fromLoop;
     float horizontalInputMove = 80;
 
-
     public PeacockFireFeather(Actor? targetFromLock, bool fromLoop) : base("1atk_feather") {
         this.targetFromLock = targetFromLock;
         this.fromLoop = fromLoop;
@@ -339,7 +339,7 @@ public class PeacockFireFeather : MaverickState {
     private void fireFeather() {
         Point? shootPos = maverick.getFirstPOIOrDefault();
         if (shootPos != null) {
-            new FinalWeaponLockProj(
+            new HomingFeather(
                 shootPos.Value, maverick.xDir, targetFromLock,
                 picapau, player,
                 player.getNextActorNetId(), rpc: true
@@ -474,6 +474,74 @@ public class PeacockTailJump : MaverickState {
 }
 #endregion
 
+
+#region ■ State Giga ━━━
+public class PeacockFireGiga : MaverickState {
+    public X4Peacock picapau = null!;
+    Actor? targetFromLock;
+    bool wasHovering;
+    bool hasShot;
+    float horizontalInputMove = 80;
+
+    public PeacockFireGiga(Actor? targetFromLock) : base("1atk_feather") {
+        this.targetFromLock = targetFromLock;
+    }
+
+    public override void onEnter(MaverickState oldState) {
+        base.onEnter(oldState);
+        picapau = maverick as X4Peacock ?? throw new NullReferenceException();
+        maverick.stopMoving();
+        maverick.useGravity = false;
+        if (oldState is PeacockHover) wasHovering = true;
+    }
+
+    public override void update() {
+        base.update();
+
+        movementControl();
+
+        if (maverick.frameIndex >= 9 && !hasShot) {
+            hasShot = true;
+            fireFeather();
+        }
+        if (picapau.cursor != null) {
+            if (maverick.frameIndex == 12 && player.input.isHeld(Control.Shoot, player) && picapau.cursor.targetLocked != null) {
+                maverick.changeState(new PeacockFireFeather(picapau.cursor.targetLocked, fromLoop: true));
+            }
+        }
+        if (maverick.isAnimOver()) {
+            if (wasHovering) {
+                maverick.changeState(new PeacockHover());
+            } else {
+                maverick.changeToIdleOrFall();
+            }
+        }
+        if (maverick.frameIndex >= 10) {
+            attackCtrl = true;
+        }
+    }
+    private void movementControl() {
+
+        if (!maverick.grounded) {
+            maverick.move(new Point((player.input.getInputDir(this.player).x * horizontalInputMove), 0));
+        }
+    }
+    private void fireFeather() {
+        Point? shootPos = maverick.getFirstPOIOrDefault();
+        if (shootPos != null) {
+            new FinalWeaponLockProj(
+                shootPos.Value, maverick.xDir, targetFromLock,
+                picapau, player,
+                player.getNextActorNetId(), rpc: true
+            );
+        }
+    }
+    public override void onExit(MaverickState newState) {
+        base.onExit(newState);
+        maverick.useGravity = true;
+    }
+}
+#endregion
 #endregion
 
 #region ▄▄▄▄⬤ PROJ ⬤▄▄▄▄
@@ -841,7 +909,6 @@ public class PeacockTeleportProj : Projectile {
             vel = Point.zero;
             hasHitGround = true;
         }
-
     }
     public override void onDestroy() {
         base.onDestroy();
@@ -901,13 +968,15 @@ public class FinalWeaponLockProj : Projectile {
 
     private int frameCount;
     private float angle = 0;
-    float lineHeight = 190f;
+    float lineHeight = 360f;
     private float initialRadius = 60f;
+
+    private const float BOTMID_Y_FIX = 180f;
 
     public FinalWeaponLockProj(
         Point pos, int xDir, Actor? targetFromLock, Actor owner, Player player, ushort? netId, bool rpc = false
     ) : base(
-        pos, xDir, owner, "empty", netId, player
+        pos, xDir, owner, "mav_x4pck_1atk_feather_explo_part", netId, player
     ) {
         this.targetFromLock = targetFromLock;
         weapon = BlastHornet.getWeapon();
@@ -934,6 +1003,16 @@ public class FinalWeaponLockProj : Projectile {
     public override void update() {
         base.update();
         frameCount++;
+        Point teleportPos = targetFromLock.pos.addxy(0, 239);
+
+        var groundHit = Global.level.raycast(targetFromLock.pos, targetFromLock.pos.addxy(0, 240), new List<Type>() { typeof(Wall) });
+
+        if (groundHit?.hitData?.hitPoint != null) {
+            teleportPos = groundHit.hitData.hitPoint.Value;
+        }
+        if (time <= 1.5f) {
+            this.changePos(teleportPos);
+        }
     }
     public override void postUpdate() {
         base.postUpdate();
@@ -941,20 +1020,15 @@ public class FinalWeaponLockProj : Projectile {
 
         if (targetFromLock != null) {
             if (time <= 1.5f) {
-                changePos(getTargetPos(targetFromLock));
-                aiMethodiDontFuckingIMGonnaEatThisButImHiglyOffendedByIt(); // (draw the 4 converging lines)
+                drawConverginLines();
             } else {
-                if (frameCount % 3 == 0) {
-                    float convergedX = pos.x;
-                    float y1 = pos.y - (lineHeight / 2);
-                    float y2 = pos.y + (lineHeight / 2);
-                    DrawWrappers.DrawLine(convergedX, y1 - 80, convergedX, y2 - 80, Color.Red, 3f, ZIndex.HUD, true);
-                }
+                drawFlashingLine();
             }
         }
     }
-    private void aiMethodiDontFuckingIMGonnaEatThisButImHiglyOffendedByIt() {
+    private void drawConverginLines() {
         angle += Global.spf * 200f;
+
         if (angle >= 360) {
             angle = 0;
         }
@@ -977,26 +1051,30 @@ public class FinalWeaponLockProj : Projectile {
             float y1 = pos.y - (lineHeight / 2) + verticalRadius * (float)Math.Sin(angleInRadians);
             float y2 = pos.y + (lineHeight / 2) - verticalRadius * (float)Math.Sin(angleInRadians);
 
-            DrawWrappers.DrawLine(currentX, y1 - 80, currentX, y2 - 80, Color.Red, 1f, ZIndex.HUD, true);
+            DrawWrappers.DrawLine(currentX, y1 - BOTMID_Y_FIX, currentX, y2 - BOTMID_Y_FIX, Color.Red, 1f, ZIndex.HUD, true);
         }
     }
 
-
-    public Point getTargetPos([NotNull] Actor targetLocked) {
-        if (targetLocked is Character chr) {
-            return chr.getParasitePos();
-        } else {
-            return targetLocked.getCenterPos();
+    private void drawFlashingLine() {
+        if (frameCount % 3 == 0) {
+            float convergedX = pos.x;
+            float y1 = pos.y - (lineHeight / 2);
+            float y2 = pos.y + (lineHeight / 2);
+            DrawWrappers.DrawLine(convergedX, y1 - BOTMID_Y_FIX, convergedX, y2 - BOTMID_Y_FIX, Color.Red, 4f, ZIndex.HUD, true);
         }
     }
+
     public override void onDestroy() {
         base.onDestroy();
-        new FinalWeaponPieceProj(pos.addxy(0, -0), xDir, 0, this, damager.owner, Global.level.mainPlayer.getNextActorNetId(), rpc: true);
+        for (int i = 0; i < 5; i++) {
+            Point piecePos = new Point(pos.x, pos.y - (i * 64));
+            new FinalWeaponPieceProj(piecePos, xDir, 1, this, damager.owner, Global.level.mainPlayer.getNextActorNetId(), rpc: true);
+        }
     }
 }
 #endregion
 
-#region ⬤ Typed ━━━━━━
+#region ⬤ Giga Piece ━━━━
 public class FinalWeaponPieceProj : Projectile {
     public int type;
     public FinalWeaponPieceProj(
@@ -1011,7 +1089,7 @@ public class FinalWeaponPieceProj : Projectile {
         damager.flinch = Global.defFlinch;
         damager.hitCooldown = 30;
         vel = Point.zero;
-        maxTime = 1.2f;
+        maxTime = 1.6f;
         destroyOnHit = false;
         destroyOnHitWall = false;
         fadeSprite = "mav_x4pck_4giga_piece_fade";
@@ -1026,7 +1104,6 @@ public class FinalWeaponPieceProj : Projectile {
                 break;
         }
 
-
         if (rpc) {
             rpcCreate(pos, owner, ownerPlayer, netId, xDir, (byte)type);
         }
@@ -1036,19 +1113,6 @@ public class FinalWeaponPieceProj : Projectile {
         return new FinalWeaponPieceProj(
             args.pos, args.xDir, args.extraData[0], args.owner, args.player, args.netId
         );
-    }
-    // Assuming a method like this is called by your engine after the object is fully ready.
-    public override void onStart() {
-        base.onStart(); // Call the base method if it exists.
-
-        if (type == 0) {
-            for (int i = 0; i < 5; i++) {
-                // The position is relative to the head piece's starting position 'pos'.
-                Point piecePos = new Point(pos.x, pos.y - 100 - (i * 100));
-                // Assuming 'rpc' is meant to be passed along for network synchronization.
-                new FinalWeaponPieceProj(piecePos, xDir, 1, this, damager.owner, Global.level.mainPlayer.getNextActorNetId(), rpc: true);
-            }
-        }
     }
 
     public override void update() {
