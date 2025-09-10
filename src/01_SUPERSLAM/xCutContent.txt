@@ -1,0 +1,185 @@
+#region ⬤ Giga Lock ━━━━
+public class FinalWeaponLockProj : Projectile {
+    public Actor? targetFromLock;
+
+    private int frameCount;
+    private float angle = 0;
+    float lineHeight = 360f;
+    private float initialRadius = 60f;
+
+    private const float BOTMID_Y_FIX = 180f;
+
+    public FinalWeaponLockProj(
+        Point pos, int xDir, Actor? targetFromLock, Actor owner, Player player, ushort? netId, bool rpc = false
+    ) : base(
+        pos, xDir, owner, "empty", netId, player
+    ) {
+        this.targetFromLock = targetFromLock;
+        weapon = BlastHornet.getWeapon();
+        projId = (int)ProjIds.BubbleSplash;
+        damager.damage = 1;
+        damager.flinch = Global.defFlinch;
+        damager.hitCooldown = 30;
+        vel = Point.zero;
+        maxTime = 2f;
+        destroyOnHit = true;
+        destroyOnHitWall = false;
+
+        if (rpc) {
+            rpcCreate(pos, owner, ownerPlayer, netId, xDir);
+        }
+    }
+
+    public static Projectile rpcInvoke(ProjParameters args) {
+        return new FinalWeaponLockProj(
+            args.pos, args.xDir, null, args.owner, args.player, args.netId
+        );
+    }
+
+    public override void update() {
+        base.update();
+        frameCount++;
+        Point teleportPos = targetFromLock.pos.addxy(0, 239);
+
+        var groundHit = Global.level.raycast(targetFromLock.pos, targetFromLock.pos.addxy(0, 240), new List<Type>() { typeof(Wall) });
+
+        if (groundHit?.hitData?.hitPoint != null) {
+            teleportPos = groundHit.hitData.hitPoint.Value;
+        }
+        if (time <= 1.5f) {
+            this.changePos(teleportPos);
+        }
+    }
+    public override void postUpdate() {
+        base.postUpdate();
+        if (!ownedByLocalPlayer) return;
+
+        if (targetFromLock != null) {
+            if (time <= 1.5f) {
+                drawConverginLines();
+            } else {
+                drawFlashingLine();
+            }
+        }
+    }
+    private void drawConverginLines() {
+        angle += Global.spf * 200f;
+
+        if (angle >= 360) {
+            angle = 0;
+        }
+        // Calculate the current radius. It will decrease as the projectile's time approaches its maxTime.
+        float currentRadius = initialRadius * (1.5f - time) / 1.5f;
+
+        // The sign of verticalRadius controls the perspective. Positive makes the front lines curve outwards.
+        float verticalRadius = 12f;
+
+        for (int i = 0; i < 4; i++) {
+            // Calculate the angle for each of the four lines, spaced 90 degrees apart.
+            float lineAngle = angle + (i * 90);
+            // Convert the angle to radians for trigonometric functions.
+            float angleInRadians = lineAngle * (float)Math.PI / 180f;
+
+            // Calculate the X position of the line on the circle.
+            float currentX = pos.x + currentRadius * (float)Math.Cos(angleInRadians);
+
+            // Adjust the Y values to create a cylinder shape
+            float y1 = pos.y - (lineHeight / 2) + verticalRadius * (float)Math.Sin(angleInRadians);
+            float y2 = pos.y + (lineHeight / 2) - verticalRadius * (float)Math.Sin(angleInRadians);
+
+            DrawWrappers.DrawLine(currentX, y1 - BOTMID_Y_FIX, currentX, y2 - BOTMID_Y_FIX, Color.Red, 1f, ZIndex.HUD, true);
+        }
+    }
+
+    private void drawFlashingLine() {
+        if (frameCount % 3 == 0) {
+            float convergedX = pos.x;
+            float y1 = pos.y - (lineHeight / 2);
+            float y2 = pos.y + (lineHeight / 2);
+            DrawWrappers.DrawLine(convergedX, y1 - BOTMID_Y_FIX, convergedX, y2 - BOTMID_Y_FIX, Color.Red, 4f, ZIndex.HUD, true);
+        }
+    }
+
+    public override void onDestroy() {
+        base.onDestroy();
+        for (int i = 0; i < 5; i++) {
+            Point piecePos = new Point(pos.x, pos.y - (30 + (i * 64)));
+            int type = 1; // Default to the center type
+            if (i == 0) {
+                type = 2; // The first piece (start)
+            } else if (i == 4) {
+                type = 0; // The last piece (end)
+            }
+            new FinalWeaponPieceProj(piecePos, xDir, type, this, damager.owner, Global.level.mainPlayer.getNextActorNetId(), rpc: true);
+        }
+    }
+}
+#endregion
+#region ⬤ Giga Piece ━━━━
+public class FinalWeaponPieceProj : Projectile {
+    public int type;
+    public FinalWeaponPieceProj(
+        Point pos, int xDir, int type, Actor owner, Player player, ushort? netId, bool rpc = false
+    ) : base(
+        pos, xDir, owner, "empty", netId, player
+    ) {
+        this.type = type;
+        // weapon = NewBuster.netWeapon;
+        // projId = (int)ProjIds.BusterLv0Proj;
+        damager.damage = 3;
+        damager.flinch = Global.defFlinch;
+        damager.hitCooldown = 12;
+        vel = Point.zero;
+        maxTime = 1.6f;
+        destroyOnHit = false;
+        destroyOnHitWall = false;
+        fadeOnAutoDestroy = true;
+
+        switch (type) {
+            case 0: //start
+                changeSprite("mav_x4pck_4giga_head", false);
+                break;
+            case 1: //piece
+                changeSprite("mav_x4pck_4giga_piece", false);
+                break;
+            case 2: //end (land)
+                yScale = -1;
+                changeSprite("mav_x4pck_4giga_head", false);
+                break;
+        }
+
+        if (rpc) {
+            rpcCreate(pos, owner, ownerPlayer, netId, xDir, (byte)type);
+        }
+    }
+
+    public static Projectile rpcInvoke(ProjParameters args) {
+        return new FinalWeaponPieceProj(
+            args.pos, args.xDir, args.extraData[0], args.owner, args.player, args.netId
+        );
+    }
+
+    float partTime = 1;
+    public override void update() {
+        base.update();
+        visible = Global.isOnFrameCycle(1);
+        if (type == 2) {
+            partTime += Global.spf;
+            if (partTime >= 0.15f) {
+                partTime = 0;
+                new Anim(pos.addxy(0, 35), "mav_x4pck_2spc_raku_fx", 1, null, true) {
+                    yScale = 0.5f,
+                
+            
+                    zIndex = this.zIndex - 30
+                };
+            }
+        }
+
+    }
+
+    public override void onDestroy() {
+        base.onDestroy();
+    }
+}
+#endregion

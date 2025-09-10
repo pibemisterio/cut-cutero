@@ -97,7 +97,7 @@ public class X4Peacock : Maverick {
                 changeState(new PeacockFireCursor(startedGrounded: this.grounded));
             }
         }
-        
+
     }
     #endregion
 
@@ -392,11 +392,6 @@ public class PeacockRaku : MaverickState {
         if (maverick.frameIndex >= 17 && !hasFired) {
             hasFired = true;
             new PeacockRakuProj(maverick.pos, maverick.xDir, maverick, player, player.getNextActorNetId(), true);
-            new Anim(maverick.pos.addxy(0, 5), "mav_x4pck_2spc_raku_fx", 1, null, true) {
-                yScale = 0.5f,
-                zIndex = picapau.zIndex - 30
-            };
-
         }
         if (maverick.isAnimOver()) {
             maverick.changeState(new MIdle());
@@ -976,7 +971,7 @@ public class FinalWeaponLockProj : Projectile {
     public FinalWeaponLockProj(
         Point pos, int xDir, Actor? targetFromLock, Actor owner, Player player, ushort? netId, bool rpc = false
     ) : base(
-        pos, xDir, owner, "mav_x4pck_1atk_feather_explo_part", netId, player
+        pos, xDir, owner, "empty", netId, player
     ) {
         this.targetFromLock = targetFromLock;
         weapon = BlastHornet.getWeapon();
@@ -1067,16 +1062,24 @@ public class FinalWeaponLockProj : Projectile {
     public override void onDestroy() {
         base.onDestroy();
         for (int i = 0; i < 5; i++) {
-            Point piecePos = new Point(pos.x, pos.y - (i * 64));
-            new FinalWeaponPieceProj(piecePos, xDir, 1, this, damager.owner, Global.level.mainPlayer.getNextActorNetId(), rpc: true);
+            Point piecePos = new Point(pos.x, pos.y - (30 + (i * 64)));
+            int type = 1; // Default to the center type
+            if (i == 0) {
+                type = 2; // The first piece (start)
+            } else if (i == 4) {
+                type = 0; // The last piece (end)
+            }
+            new FinalWeaponPieceProj(piecePos, xDir, type, this, damager.owner, Global.level.mainPlayer.getNextActorNetId(), rpc: true);
         }
     }
 }
 #endregion
-
 #region ⬤ Giga Piece ━━━━
 public class FinalWeaponPieceProj : Projectile {
     public int type;
+
+    int customLoopCount;
+    private const int MAX_ANIM_LOOPS = 6;
     public FinalWeaponPieceProj(
         Point pos, int xDir, int type, Actor owner, Player player, ushort? netId, bool rpc = false
     ) : base(
@@ -1085,22 +1088,25 @@ public class FinalWeaponPieceProj : Projectile {
         this.type = type;
         // weapon = NewBuster.netWeapon;
         // projId = (int)ProjIds.BusterLv0Proj;
-        damager.damage = 1;
+        damager.damage = 3;
         damager.flinch = Global.defFlinch;
-        damager.hitCooldown = 30;
+        damager.hitCooldown = 12;
         vel = Point.zero;
-        maxTime = 1.6f;
+        maxTime = 3f;
         destroyOnHit = false;
         destroyOnHitWall = false;
-        fadeSprite = "mav_x4pck_4giga_piece_fade";
         fadeOnAutoDestroy = true;
 
         switch (type) {
-            case 0: //head
-                changeSprite("mav_x4pck_4giga_piece", false);
+            case 0: //start
+                changeSprite("mav_x4pck_4giga_head", false);
                 break;
             case 1: //piece
                 changeSprite("mav_x4pck_4giga_piece", false);
+                break;
+            case 2: //end (land)
+                yScale = -1;
+                changeSprite("mav_x4pck_4giga_head", false);
                 break;
         }
 
@@ -1114,9 +1120,33 @@ public class FinalWeaponPieceProj : Projectile {
             args.pos, args.xDir, args.extraData[0], args.owner, args.player, args.netId
         );
     }
-
+    public override void onStart() {
+        base.onStart();
+        shakeCamera();
+    }
+    float partTime = 1;
     public override void update() {
         base.update();
+
+        visible = Global.isOnFrameCycle(3);
+        if (isAnimOver()) destroySelf();
+        if (type == 2) { //part
+            partTime += Global.spf;
+            if (partTime >= 0.05f) {
+                partTime = 0;
+                new Anim(pos.addxy(Helpers.randomRange(-10, 30) * xDir, Helpers.randomRange(10, 30)), "mav_x4pck_1atk_feather_explo_part", 1, null, true) {
+            ttl = 0.3f,
+                    zIndex = this.zIndex - 30,
+                    vel = new Point(0, -300), //reverse soeed
+                };
+            }
+        }
+        //just a custom loop
+        if (frameIndex == 8 && customLoopCount < MAX_ANIM_LOOPS) {
+            customLoopCount++;
+            frameIndex = 4;
+
+        }
     }
 
     public override void onDestroy() {
