@@ -180,18 +180,18 @@ public class TemplateCharstate : CharState {
 =========================================================  MavState  =========================================================
 
 #region ■ MavState ━━━━━
-public class Mushroom : MaverickState {
-    public X4Mushroom minepe = null!;
+public class Stingray : MaverickState {
+    public X4Stingray hipo = null!;
     //bool startedGrounded;
 
-    public Mushroom() : base("1atk") {
+    public Spider() : base("1atk") {
         //public MavState(bool startedGrounded) : base(startedGrounded ? "1atk" : "1atk_air") {
         //this.startedGrounded = startedGrounded;
     }
 
     public override void onEnter(MaverickState oldState) {
         base.onEnter(oldState);
-        minepe = maverick as X4Mushroom ?? throw new NullReferenceException();
+        hipo = maverick as X4Stingray ?? throw new NullReferenceException();
         maverick.stopMoving();
     }
 

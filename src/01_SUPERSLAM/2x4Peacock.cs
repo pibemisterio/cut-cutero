@@ -478,7 +478,7 @@ public class PeacockFireGiga : MaverickState {
     bool hasShot;
     float horizontalInputMove = 80;
 
-    public PeacockFireGiga(Actor? targetFromLock) : base("1atk_feather") {
+    public PeacockFireGiga(Actor? targetFromLock) : base("4giga_state") {
         this.targetFromLock = targetFromLock;
     }
 
@@ -487,23 +487,22 @@ public class PeacockFireGiga : MaverickState {
         picapau = maverick as X4Peacock ?? throw new NullReferenceException();
         maverick.stopMoving();
         maverick.useGravity = false;
+
+        new FinalWeaponLockProj(
+            maverick.pos, maverick.xDir, targetFromLock,
+            picapau, player,
+            player.getNextActorNetId(), rpc: true
+        );
+
         if (oldState is PeacockHover) wasHovering = true;
     }
+
+
 
     public override void update() {
         base.update();
 
-        movementControl();
 
-        if (maverick.frameIndex >= 9 && !hasShot) {
-            hasShot = true;
-            fireFeather();
-        }
-        if (picapau.cursor != null) {
-            if (maverick.frameIndex == 12 && player.input.isHeld(Control.Shoot, player) && picapau.cursor.targetLocked != null) {
-                maverick.changeState(new PeacockFireFeather(picapau.cursor.targetLocked, fromLoop: true));
-            }
-        }
         if (maverick.isAnimOver()) {
             if (wasHovering) {
                 maverick.changeState(new PeacockHover());
@@ -521,16 +520,7 @@ public class PeacockFireGiga : MaverickState {
             maverick.move(new Point((player.input.getInputDir(this.player).x * horizontalInputMove), 0));
         }
     }
-    private void fireFeather() {
-        Point? shootPos = maverick.getFirstPOIOrDefault();
-        if (shootPos != null) {
-            new FinalWeaponLockProj(
-                shootPos.Value, maverick.xDir, targetFromLock,
-                picapau, player,
-                player.getNextActorNetId(), rpc: true
-            );
-        }
-    }
+
     public override void onExit(MaverickState newState) {
         base.onExit(newState);
         maverick.useGravity = true;
@@ -960,6 +950,7 @@ public class TailBladeProj : Projectile {
 #region ⬤ Giga Lock ━━━━
 public class FinalWeaponLockProj : Projectile {
     public Actor? targetFromLock;
+    public Anim? giantStart;
 
     private int frameCount;
     private float angle = 0;
@@ -994,7 +985,10 @@ public class FinalWeaponLockProj : Projectile {
             args.pos, args.xDir, null, args.owner, args.player, args.netId
         );
     }
-
+    public override void onStart() {
+        base.onStart();
+        giantStart = new Anim(pos.addxy(0, 25), "mav_x4pck_4giga_start", 1, null, true) { blink = true };
+    }
     public override void update() {
         base.update();
         frameCount++;
@@ -1007,6 +1001,7 @@ public class FinalWeaponLockProj : Projectile {
         }
         if (time <= 1.5f) {
             this.changePos(teleportPos);
+            giantStart?.changePos(teleportPos.addxy(0, -380));
         }
     }
     public override void postUpdate() {
@@ -1022,31 +1017,33 @@ public class FinalWeaponLockProj : Projectile {
         }
     }
     private void drawConverginLines() {
-        angle += Global.spf * 200f;
+        if (frameCount % 2 == 0) {
+            angle += Global.spf * 200f;
 
-        if (angle >= 360) {
-            angle = 0;
-        }
-        // Calculate the current radius. It will decrease as the projectile's time approaches its maxTime.
-        float currentRadius = initialRadius * (1.5f - time) / 1.5f;
+            if (angle >= 360) {
+                angle = 0;
+            }
+            // Calculate the current radius. It will decrease as the projectile's time approaches its maxTime.
+            float currentRadius = initialRadius * (1.5f - time) / 1.5f;
 
-        // The sign of verticalRadius controls the perspective. Positive makes the front lines curve outwards.
-        float verticalRadius = 12f;
+            // The sign of verticalRadius controls the perspective. Positive makes the front lines curve outwards.
+            float verticalRadius = 12f;
 
-        for (int i = 0; i < 4; i++) {
-            // Calculate the angle for each of the four lines, spaced 90 degrees apart.
-            float lineAngle = angle + (i * 90);
-            // Convert the angle to radians for trigonometric functions.
-            float angleInRadians = lineAngle * (float)Math.PI / 180f;
+            for (int i = 0; i < 4; i++) {
+                // Calculate the angle for each of the four lines, spaced 90 degrees apart.
+                float lineAngle = angle + (i * 90);
+                // Convert the angle to radians for trigonometric functions.
+                float angleInRadians = lineAngle * (float)Math.PI / 180f;
 
-            // Calculate the X position of the line on the circle.
-            float currentX = pos.x + currentRadius * (float)Math.Cos(angleInRadians);
+                // Calculate the X position of the line on the circle.
+                float currentX = pos.x + currentRadius * (float)Math.Cos(angleInRadians);
 
-            // Adjust the Y values to create a cylinder shape
-            float y1 = pos.y - (lineHeight / 2) + verticalRadius * (float)Math.Sin(angleInRadians);
-            float y2 = pos.y + (lineHeight / 2) - verticalRadius * (float)Math.Sin(angleInRadians);
+                // Adjust the Y values to create a cylinder shape
+                float y1 = pos.y - (lineHeight / 2) + verticalRadius * (float)Math.Sin(angleInRadians);
+                float y2 = pos.y + (lineHeight / 2) - verticalRadius * (float)Math.Sin(angleInRadians);
 
-            DrawWrappers.DrawLine(currentX, y1 - BOTMID_Y_FIX, currentX, y2 - BOTMID_Y_FIX, Color.Red, 1f, ZIndex.HUD, true);
+                DrawWrappers.DrawLine(currentX, y1 - BOTMID_Y_FIX, currentX, y2 - BOTMID_Y_FIX, Color.Red, 1f, ZIndex.HUD, true);
+            }
         }
     }
 
@@ -1061,12 +1058,13 @@ public class FinalWeaponLockProj : Projectile {
 
     public override void onDestroy() {
         base.onDestroy();
-        for (int i = 0; i < 5; i++) {
+        giantStart?.destroySelf();
+        for (int i = 0; i < 6; i++) {
             Point piecePos = new Point(pos.x, pos.y - (30 + (i * 64)));
             int type = 1; // Default to the center type
             if (i == 0) {
                 type = 2; // The first piece (start)
-            } else if (i == 4) {
+            } else if (i == 5) {
                 type = 0; // The last piece (end)
             }
             new FinalWeaponPieceProj(piecePos, xDir, type, this, damager.owner, Global.level.mainPlayer.getNextActorNetId(), rpc: true);
@@ -1079,7 +1077,7 @@ public class FinalWeaponPieceProj : Projectile {
     public int type;
 
     int customLoopCount;
-    private const int MAX_ANIM_LOOPS = 6;
+    private const int MAX_ANIM_LOOPS = 9;
     public FinalWeaponPieceProj(
         Point pos, int xDir, int type, Actor owner, Player player, ushort? netId, bool rpc = false
     ) : base(
@@ -1088,7 +1086,7 @@ public class FinalWeaponPieceProj : Projectile {
         this.type = type;
         // weapon = NewBuster.netWeapon;
         // projId = (int)ProjIds.BusterLv0Proj;
-        damager.damage = 3;
+        damager.damage = 8;
         damager.flinch = Global.defFlinch;
         damager.hitCooldown = 12;
         vel = Point.zero;
@@ -1122,7 +1120,13 @@ public class FinalWeaponPieceProj : Projectile {
     }
     public override void onStart() {
         base.onStart();
-        shakeCamera();
+        if (type == 2) {
+            shakeCamera();
+            new Anim(pos.addxy(0, 25), "mav_x4pck_2spc_raku_fx", 1, null, true) {
+                yScale = 0.5f,
+                zIndex = this.zIndex - 30
+            };
+        }
     }
     float partTime = 1;
     public override void update() {
@@ -1134,8 +1138,8 @@ public class FinalWeaponPieceProj : Projectile {
             partTime += Global.spf;
             if (partTime >= 0.05f) {
                 partTime = 0;
-                new Anim(pos.addxy(Helpers.randomRange(-10, 30) * xDir, Helpers.randomRange(10, 30)), "mav_x4pck_1atk_feather_explo_part", 1, null, true) {
-            ttl = 0.3f,
+                new Anim(pos.addxy(Helpers.randomRange(-30, 30) * xDir, Helpers.randomRange(0, 0)), "mav_x4pck_1atk_feather_explo_part", 1, null, true) {
+                    ttl = 0.3f,
                     zIndex = this.zIndex - 30,
                     vel = new Point(0, -300), //reverse soeed
                 };

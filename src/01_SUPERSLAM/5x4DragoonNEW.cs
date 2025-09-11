@@ -206,7 +206,7 @@ public class DragoonHadoken : MaverickState {
 
     public DragoonHadoken(bool startedGrounded, bool startedHoldingDown) :
     base(startedGrounded ? startedHoldingDown ? "1atk_down" : "1atk" : startedHoldingDown ? "1atk_down_air" : "1atk_air") {
-        //kinda fucked up but has to be like this for the air transitions // you son of a bitch
+        //kinda fucked up but has to be like this for the air transitions   ///you son of a bitch
         this.startedGrounded = startedGrounded;
         this.startedHoldingDown = startedHoldingDown;
         landSprite = startedHoldingDown ? "1atk_down" : "1atk";

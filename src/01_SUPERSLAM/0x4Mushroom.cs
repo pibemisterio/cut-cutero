@@ -233,14 +233,14 @@ public class MushroomJump : MaverickState {
     private bool hasEndedDoubleJumpAnim; //minor thing
     private int lastXDir;
 
-    private const float SPEED_ACC = 180f;   //holding fowards
+    private const float SPEED_ACC = 180f;   //holding fowards 
     private const float SPEED_DEACC = 230f; //not holding anything
     private const float SPEED_MAX = 200f;
 
     private const float JUMP_MOD = 1f;
     private const float JUMP_MOD2 = 1.2f;
 
-
+//PAPUTODO: check spindash jump low velocity in sonic
     public MushroomJump(float storedXSpeed, bool isDoubleJump) : base(isDoubleJump ? "jump2" : "jump") {
         this.storedXSpeed = storedXSpeed;
         this.isDoubleJump = isDoubleJump;
@@ -276,10 +276,10 @@ public class MushroomJump : MaverickState {
 
         //----------------------Movement Calculation----------------------------
         if (isHoldingDirection) {
-            // Accelerate when holding direction
+            // accelerate when holding direction
             storedXSpeed = Math.Min(SPEED_MAX, storedXSpeed + (Global.spf * SPEED_ACC));
         } else {
-            // Decelerate when NOT holding direction
+            // decelerate when NOT holding direction
             storedXSpeed = Math.Max(0, storedXSpeed - (Global.spf * SPEED_DEACC));
         }
         //without this, changing direction will do so at full storedXSpeed
@@ -370,7 +370,7 @@ public class MushroomWall : MaverickState {
         }
         if (isAttacking && !hasFiredLoop && maverick.frameIndex == 3) {
             hasFiredLoop = true;
-            new MushroomBodyProj(maverick.pos.addxy(28 * maverick.xDir, 2), maverick.xDir, isFromWall: true, maverick, player, player.getNextActorNetId(), true);
+            new MushroomBodyProj(maverick.pos.addxy(36 * maverick.xDir, 2), maverick.xDir, isFromWall: true, maverick, player, player.getNextActorNetId(), true);
         }
         if (isAttacking && maverick.frameIndex == 4) {
             hasFiredLoop = false;
@@ -422,7 +422,7 @@ public class MushroomCroutch : MaverickState { //aka spindash start
         base.update();
         levelSpeed = levelSpeeds[(int)revLevel];
         //------------------------------Croutch Handling------------------------
-        // Initiate SpinDash/Croutch
+        // initiate spinDash/croutch
         if (!input.isHeld(Control.Down, player)) {
             if (!startedSpindashing) {
                 maverick.changeState(new MIdle());
@@ -430,7 +430,7 @@ public class MushroomCroutch : MaverickState { //aka spindash start
                 maverick.changeState(new MushroomSpinDash(levelSpeed));
             }
         }
-        //Initiate Revvin'
+        //initiate revvin'
         if (input.isPressed(Control.Dash, player) && !startedSpindashing) {
             startedSpindashing = true;
             revLevel = 0;
@@ -440,16 +440,16 @@ public class MushroomCroutch : MaverickState { //aka spindash start
 
         //------------------------------Factor Handling------------------------
 
-        //Decrease factor over time 
+        //decrease factor over time 
         if (startedSpindashing) {
             maverick.frameSpeed = levelFrameSpeeds[(int)revLevel]; //anim speed
-            timeSinceLastRev -= Global.spf * 2f;   // 3.5 equals decrease time mult
+            timeSinceLastRev -= Global.spf * 2f;   // 2f equals decrease time mult
         }
         if (timeSinceLastRev <= 0) {
             timeSinceLastRev = 1f;
             revLevel = Math.Max(MIN_LEVEL, revLevel - 1);
         }
-        //Increase Factor by Control.Dash
+        //increase Factor by Control.Dash
         if (input.isPressed(Control.Dash, player) && startedSpindashing) {
             revLevel = Math.Min(MAX_LEVEL, revLevel + 1);
             timeSinceLastRev = 1f;

@@ -43,39 +43,29 @@ public class X4Template : Maverick {
     }
 
 
+    #region ★ Update ━━━━━
     public override void update() {
         base.update();
-
         if (!ownedByLocalPlayer) return;
 
-    }
+        if (state is MIdle or MRun or MLand or MJump or MFall) {
 
-    public override bool attackCtrl() {
-        if (input.isHeld(Control.Shoot, player) && state is MRun) {
-            changeState(new FakeZeroMeleeState());
-            return true;
-        }
-        if (input.isHeld(Control.Shoot, player)) {
-            changeState(new FakeZeroShootState(), false);
-            return true;
-        }
-        if (input.isPressed(Control.Special1, player)) {
-            changeState(new FakeZeroMeleeState());
-            return true;
-        }
-        if (input.isPressed(Control.Dash, player)) {
-            changeState(new FakeZeroGroundPunchState());
-            return true;
-        }
-        if (grounded) {
-            if (input.isHeld(Control.Down, player) && state is not FakeZeroGuardState) {
-                changeState(new FakeZeroGuardState());
-                return true;
+            if (input.isPressed(Control.Shoot, player)) {
+
+            }
+            if (input.isPressed(Control.Special1, player)) {
+
+            }
+            if (input.isPressed(Control.Dash, player)) {
+
+            }
+            if (input.isPressed(Control.Special2, player)) {
+
             }
         }
-        return false;
-    }
 
+    }
+    #endregion
 
     public override float getRunSpeed() {
 

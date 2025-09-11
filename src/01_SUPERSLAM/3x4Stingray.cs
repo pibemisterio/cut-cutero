@@ -126,35 +126,381 @@ public class X4Stingray : Maverick {
 }
 
 
-// #endregion
-// #region ▄▄▄■ STATES ■▄▄▄▄
-
-// class StingrayFly
-
-//        cousumes fuel, dashing consumes way more
+#endregion
+#region ▄▄▄■ STATES ■▄▄▄▄
 
 
-// class StingrayKneeShot
-
-// class StingrayWhirpool
-
-// class StingrayDash
-
-// class StingrayGiga
 
 
-// #endregion
 
-// #region ▄▄▄▄⬤ PROJ ⬤▄▄▄▄
 
-// class StingrayKneeProj
 
-// class StingrayWhirpoolProj
+#region ■ Knee Shoot ━━━
+public class StingrayKneeShoot : MaverickState {
+    public X4Stingray hipo = null!;
+    bool hasFired;
 
-// class StingrayDashProj
 
-// class StingrayGigaProj
 
+    public StingrayKneeShoot() : base("1atk") {
+    }
+
+    public override void onEnter(MaverickState oldState) {
+        base.onEnter(oldState);
+        hipo = maverick as X4Stingray ?? throw new NullReferenceException();
+        maverick.stopMoving();
+        maverick.useGravity = false;
+    }
+
+    public override void update() {
+        base.update();
+        if (maverick.frameIndex == 4 && !hasFired) {
+            hasFired = true;
+            //new stingray shot (constructor stingray hp)
+        }
+        if (maverick.frameIndex == 7 && player.input.isHeld(Control.Shoot, player)) {
+            hasFired = false;
+            maverick.frameIndex = 4;
+        }
+        if (maverick.isAnimOver()) {
+            maverick.changeState(new MIdle());
+        }
+    }
+
+    public override void onExit(MaverickState newState) {
+        base.onExit(newState);
+        maverick.useGravity = false;
+    }
+}
+#endregion
+#region ■ Whirpool Shoot ━
+public class StingrayWhirpool : MaverickState {
+    public X4Stingray hipo = null!;
+    bool startedGrounded;
+
+    Projectile? backwardsProj;
+    Projectile? fowardsProj;
+
+    private int whirpoolType = 0;
+
+    private bool isMovingLeft;
+    private bool isMovingRight;
+    private bool hasCreatedBackwards;
+    private bool hasCreatedFowards;
+
+    private const float MOVE_SPEED = 80;
+
+    public StingrayWhirpool(bool startedGrounded) : base(startedGrounded ? "1atk" : "1atk_air") {
+        this.startedGrounded = startedGrounded;
+        landSprite = "2spcl"; //start jsons
+        airSprite = "2spcl_air";
+
+    }
+
+    public override void onEnter(MaverickState oldState) {
+        base.onEnter(oldState);
+        hipo = maverick as X4Stingray ?? throw new NullReferenceException();
+        maverick.stopMoving();
+        maverick.useGravity = false;
+    }
+
+    public override void update() {
+        base.update();
+        if (maverick.frameIndex < 5) return;
+        isMovingLeft = false;
+        isMovingRight = false;
+
+        if (player.input.isHeld(Control.Left, player)) {
+            maverick.changeSpriteFromName("2spcl_backwards", true);
+            isMovingLeft = true;
+            whirpoolType = 0;
+            maverick.move(new Point(maverick.grounded ? 0 : -MOVE_SPEED, 0));
+
+        } else if (player.input.isHeld(Control.Right, player)) {
+            maverick.changeSpriteFromName("2spcl_fowards", true);
+            isMovingRight = true;
+            whirpoolType = 1;
+            maverick.move(new Point(maverick.grounded ? 0 : MOVE_SPEED, 0));
+        }
+        if (isMovingLeft && !hasCreatedBackwards) {
+            hasCreatedBackwards = true;
+            hasCreatedFowards = false;
+            // backwardsProj = New
+            fowardsProj?.destroySelf();
+
+        } else if (isMovingRight && !hasCreatedFowards) {
+            hasCreatedFowards = true;
+            hasCreatedBackwards = false;
+            // fowardsProj = New
+            backwardsProj?.destroySelf();
+        }
+        if (!player.input.isHeld(Control.Left, player) || !player.input.isHeld(Control.Right, player)) {
+            maverick.changeState(new MIdle());
+        }
+    }
+
+
+    public override void onExit(MaverickState newState) {
+        base.onExit(newState);
+        maverick.useGravity = true;
+    }
+}
+#endregion
+
+#region ■ Flying Dash ━━━
+public class StingrayFlyingDash : MaverickState {   //check old
+    public X4Stingray hipo = null!;
+    //bool startedGrounded;
+
+    public StingrayFlyingDash() : base("1atk") {
+        //public MavState(bool startedGrounded) : base(startedGrounded ? "1atk" : "1atk_air") {
+        //this.startedGrounded = startedGrounded;
+    }
+
+    public override void onEnter(MaverickState oldState) {
+        base.onEnter(oldState);
+        hipo = maverick as X4Stingray ?? throw new NullReferenceException();
+        maverick.stopMoving();
+    }
+
+    public override void update() {
+        base.update();
+
+        if (maverick.isAnimOver()) {
+            maverick.changeState(new MIdle());
+        }
+    }
+
+    public override void onExit(MaverickState newState) {
+        base.onExit(newState);
+    }
+}
+#endregion
+
+#region ■ Giga Shoot ━━━
+public class StingrayGiga : MaverickState {
+    public X4Stingray hipo = null!;
+    //bool startedGrounded;
+
+    public StingrayGiga() : base("1atk") {
+        //public MavState(bool startedGrounded) : base(startedGrounded ? "1atk" : "1atk_air") {
+        //this.startedGrounded = startedGrounded;
+    }
+
+    public override void onEnter(MaverickState oldState) {
+        base.onEnter(oldState);
+        hipo = maverick as X4Stingray ?? throw new NullReferenceException();
+        maverick.stopMoving();
+    }
+
+    public override void update() {
+        base.update();
+
+        if (maverick.isAnimOver()) {
+            maverick.changeState(new MIdle());
+        }
+    }
+
+    public override void onExit(MaverickState newState) {
+        base.onExit(newState);
+    }
+}
+#endregion
+
+
+
+#endregion
+
+#region ▄▄▄▄⬤ PROJ ⬤▄▄▄▄
+
+
+
+
+
+
+
+
+#region ⬤ Knee Proj ━━━━
+public class StingrayKneeProj : Projectile {
+    public StingrayKneeProj(
+        Point pos, int xDir, Actor owner, Player player, ushort? netId, bool rpc = false
+    ) : base(
+        pos, xDir, owner, "empty", netId, player
+    ) {
+        // weapon = NewBuster.netWeapon;
+        // projId = (int)ProjIds.BusterLv0Proj;
+        vel = new Point(300 * xDir, 0);
+        maxTime = 1.2f;
+        damager.damage = 1;
+        damager.flinch = Global.defFlinch;
+        damager.hitCooldown = 30;
+        //----------------------------//    
+        destroyOnHit = true;
+        destroyOnHitWall = false;
+        fadeSprite = "mmx_x4btr_lv0_fade";
+        fadeOnAutoDestroy = true;
+
+        if (rpc) {
+            rpcCreate(pos, owner, ownerPlayer, netId, xDir);
+        }
+    }
+
+    public static Projectile rpcInvoke(ProjParameters args) {
+        return new StingrayKneeProj(
+            args.pos, args.xDir, args.owner, args.player, args.netId
+        );
+    }
+
+    public override void update() {
+        base.update();
+    }
+
+    public override void onDestroy() {
+        base.onDestroy();
+    }
+}
+#endregion
+
+#region ⬤ Whirpool Proj ━━
+public class StingrayWhirpoolProj : Projectile {
+    //public int type;
+    public StingrayWhirpoolProj(
+        Point pos, int xDir, int type, Actor owner, Player player, ushort? netId, bool rpc = false
+    ) : base(
+        pos, xDir, owner, "empty", netId, player
+    ) {
+        //weapon = NewBuster.netWeapon;
+        //projId = (int)ProjIds.BusterLv0Proj;
+        vel = new Point(300 * xDir, 0);
+        maxTime = 1.2f;
+        damager.damage = 1;
+        damager.flinch = Global.defFlinch;
+        damager.hitCooldown = 30;
+        //----------------------------//    
+        //this.type = type;
+        destroyOnHit = true;
+        destroyOnHitWall = false;
+        fadeSprite = "mmx_x4btr_lv0_fade";
+        fadeOnAutoDestroy = true;
+
+        switch (type) {
+            case 0:
+                break;
+            case 1:
+                break;
+        }
+
+        if (rpc) {
+            rpcCreate(pos, owner, ownerPlayer, netId, xDir, (byte)type);
+        }
+    }
+
+    public static Projectile rpcInvoke(ProjParameters args) {
+        return new TypedProj(
+            args.pos, args.xDir, args.extraData[0], args.owner, args.player, args.netId
+        );
+    }
+
+    public override void update() {
+        base.update();
+    }
+
+    public override void onDestroy() {
+        base.onDestroy();
+    }
+}
+#endregion
+
+#region ⬤ Dash Proj ━━━━
+public class StingrayDashProj : Projectile {
+    public StingrayDashProj(
+        Point pos, int xDir, Actor owner, Player player, ushort? netId, bool rpc = false
+    ) : base(
+        pos, xDir, owner, "empty", netId, player
+    ) {
+        // weapon = NewBuster.netWeapon;
+        // projId = (int)ProjIds.BusterLv0Proj;
+        vel = new Point(300 * xDir, 0);
+        maxTime = 1.2f;
+        damager.damage = 1;
+        damager.flinch = Global.defFlinch;
+        damager.hitCooldown = 30;
+        //----------------------------//    
+        destroyOnHit = true;
+        destroyOnHitWall = false;
+        fadeSprite = "mmx_x4btr_lv0_fade";
+        fadeOnAutoDestroy = true;
+
+        if (rpc) {
+            rpcCreate(pos, owner, ownerPlayer, netId, xDir);
+        }
+    }
+
+    public static Projectile rpcInvoke(ProjParameters args) {
+        return new StingrayDashProj(
+            args.pos, args.xDir, args.owner, args.player, args.netId
+        );
+    }
+
+    public override void update() {
+        base.update();
+    }
+
+    public override void onDestroy() {
+        base.onDestroy();
+    }
+}
+#endregion
+
+#region ⬤ Giga Proj ━━━━
+public class StingrayGigaProj : Projectile {
+    //public int type;
+    public StingrayGigaProj(
+        Point pos, int xDir, int type, Actor owner, Player player, ushort? netId, bool rpc = false
+    ) : base(
+        pos, xDir, owner, "empty", netId, player
+    ) {
+        //weapon = NewBuster.netWeapon;
+        //projId = (int)ProjIds.BusterLv0Proj;
+        vel = new Point(300 * xDir, 0);
+        maxTime = 1.2f;
+        damager.damage = 1;
+        damager.flinch = Global.defFlinch;
+        damager.hitCooldown = 30;
+        //----------------------------//    
+        //this.type = type;
+        destroyOnHit = true;
+        destroyOnHitWall = false;
+        fadeSprite = "mmx_x4btr_lv0_fade";
+        fadeOnAutoDestroy = true;
+
+        switch (type) {
+            case 0:
+                break;
+            case 1:
+                break;
+        }
+
+        if (rpc) {
+            rpcCreate(pos, owner, ownerPlayer, netId, xDir, (byte)type);
+        }
+    }
+
+    public static Projectile rpcInvoke(ProjParameters args) {
+        return new StingrayGigaProj(
+            args.pos, args.xDir, args.extraData[0], args.owner, args.player, args.netId
+        );
+    }
+
+    public override void update() {
+        base.update();
+    }
+
+    public override void onDestroy() {
+        base.onDestroy();
+    }
+}
+#endregion
 
 
 
